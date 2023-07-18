@@ -1,0 +1,65 @@
+FROM rockylinux:8 as builder
+
+ARG RAS_FILE=RAS_v631_Linux_test.zip
+ARG RAS_UNZIP_DIR=Ras_v631_test/Ras_v631/Release
+ARG RAS_LIB_DIR=Ras_v631_test/libs
+
+RUN yum -y update &&\ 
+    yum -y install wget &&\
+    yum -y install unzip &&\
+    yum -y install gcc &&\
+    yum -y install gcc-c++ &&\
+    yum -y install make &&\
+    yum -y install libcurl-devel.x86_64 &&\
+    yum -y install openssl-devel.x86_64 &&\
+    mkdir -p /src/ras-runner &&\
+    mkdir  /ras
+    
+
+COPY ${RAS_FILE} /
+COPY hdf5-1.14.1-2.tar.gz /
+COPY go.mod main.go /src/ras-runner
+
+ENV GOROOT=/go
+ENV GOPATH=/src/go
+ENV PATH=/go/bin:$PATH
+ENV CGO_LDFLAGS="-L/hdf/lib"
+ENV CGO_CFLAGS="-I/hdf/include"
+ENV LD_LIBRARY_PATH=/hdf/lib
+
+RUN unzip ${RAS_FILE} &&\
+    mv /${RAS_LIB_DIR} /ras/libs &&\
+    mv /${RAS_UNZIP_DIR} /ras/bin &&\
+    chmod -R +x /ras/* &&\
+    wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
+    tar -xvzf /go1.18.1.linux-amd64.tar.gz -C / &&\
+    mkdir /hdfsrc &&\
+    tar -xvzf hdf5-1.14.1-2.tar.gz --directory /hdfsrc --strip 2 &&\ 
+    cd /hdfsrc &&\
+    ./configure --prefix=/hdf --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
+    make &&\
+    make install &&\
+    cd /src/ras-runner &&\
+    go mod tidy &&\
+    go build
+    
+
+FROM rockylinux:8
+
+ENV PATH=/hdf/bin:/ras/bin:/ras:$PATH
+ENV LD_LIBRARY_PATH=/hdf/lib
+
+RUN mkdir -p /sim/model
+
+COPY --from=builder /ras /ras
+COPY --from=builder /src/ras-runner/ras-runner /ras/ras-runner
+COPY --from=builder /hdf /hdf
+COPY run-model.sh /ras/run-model.sh
+COPY run-geom-preproc.sh /ras/run-geom-preproc.sh
+
+CMD ["/ras/ras-runner"]
+
+
+
+
+
