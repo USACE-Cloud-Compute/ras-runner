@@ -245,11 +245,24 @@ func getRowVal(srcVals *hdf5utils.HdfDataset, srcTimes *hdf5utils.HdfDataset, ti
 	return 0, errors.New(fmt.Sprintf("Unable to find corresponding input source record for time %f", timeval))
 }
 
+func encodeUrlPath(src string) string {
+	srcvals := strings.Split(src, "/")
+	srcencoded := strings.Builder{}
+	for i, sv := range srcvals {
+		if i == 0 {
+			srcencoded.WriteString(url.PathEscape(sv))
+		} else {
+			srcencoded.WriteString("/" + url.PathEscape(sv))
+		}
+	}
+	return srcencoded.String()
+}
+
 func MigrateData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string) error {
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, AWSBUCKET))
-		src = fmt.Sprintf(s3BucketTemplate, bucket, srcstore.Parameters["root"], url.QueryEscape(src))
+		src = fmt.Sprintf(s3BucketTemplate, bucket, srcstore.Parameters["root"], encodeUrlPath(src))
 	}
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
 	if err != nil {

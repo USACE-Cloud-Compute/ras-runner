@@ -5,6 +5,7 @@ ARG RAS_UNZIP_DIR=RAS_v610_Linux_test/Ras_v61/Release
 ARG RAS_LIB_DIR=RAS_v610_Linux_test/libs
 
 RUN yum -y update &&\ 
+    yum -y install git &&\
     yum -y install wget &&\
     yum -y install unzip &&\
     yum -y install gcc &&\
