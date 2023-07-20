@@ -93,12 +93,13 @@ func main() {
 				log.Fatalln(err)
 			}
 			log.Printf("finished updating boundary condition %s\n", action.Name)
-		case "unsteady-simulation":
-			log.Printf("Running unsteady-simulation: %s", action.Description)
+		case "copy-inputs":
 			err = fetchInputSourceFiles(pm)
 			if err != nil {
 				log.Fatalln(err)
 			}
+		case "unsteady-simulation":
+			log.Printf("Running unsteady-simulation: %s", action.Description)
 			modelPrefix = pm.GetPayload().Attributes["modelPrefix"].(string)
 
 			plan := pm.GetPayload().Attributes["plan"].(string) //cfile
