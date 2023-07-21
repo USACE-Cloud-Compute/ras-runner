@@ -122,14 +122,15 @@ func main() {
 			}
 
 			log.Printf("Running model %s\n", action.Name)
-			cmdout, err := exec.Command(MODEL_SCRIPT, MODEL_DIR, modelPrefix, geom, plan).Output()
+			cmdout, err := exec.Command(MODEL_SCRIPT, MODEL_DIR, modelPrefix, geom, plan).CombinedOutput()
+			// grab any log information and write to output location before dealing with any errors
+			out.Write([]byte("---------- RAS Model Output --------------"))
+			_, err = out.Write(cmdout)
+			saveResults(pm, plan, &out)
+			// handle the error now....
 			if err != nil {
 				log.Fatalf("Error running ras model:%s\n", err)
 			}
-
-			out.Write([]byte("---------- RAS Model Output --------------"))
-			_, err = out.Write(cmdout)
-			saveResults(pm, plan, out)
 
 		}
 	}
@@ -389,23 +390,25 @@ func fetchInputSourceFiles(pm *cc.PluginManager) error {
 	return nil
 }
 
-func saveResults(pm *cc.PluginManager, rasplan string, raslog strings.Builder) error {
+func saveResults(pm *cc.PluginManager, rasplan string, raslog *strings.Builder) error {
 	//write plan results
 	file := fmt.Sprintf("%s.p%s.tmp.hdf", modelPrefix, rasplan)
 	ds, err := pm.GetOutputDataSource(file)
 	filepath := fmt.Sprintf("%s/%s", MODEL_DIR, file)
 	reader, err := os.Open(filepath)
 	if err != nil {
-		return err
-	}
-	defer reader.Close()
-	err = pm.FileWriter(reader, ds, 0)
-	if err != nil {
-		return err
+		raslog.WriteString(fmt.Sprintf("Unable to open %s for copying: %s\n", file, err))
+	} else {
+		defer reader.Close()
+		err = pm.FileWriter(reader, ds, 0)
+		if err != nil {
+			raslog.WriteString(fmt.Sprintf("Unable to copy %s: %s\n", file, err))
+		}
 	}
 	//write log
 	ds, err = pm.GetOutputDataSource("rasoutput")
 	logReader := strings.NewReader(raslog.String())
+	log.Printf("Output log:%s", ds.Paths[0])
 	err = pm.FileWriter(logReader, ds, 0)
 	return err
 }
