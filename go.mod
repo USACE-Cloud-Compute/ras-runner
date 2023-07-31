@@ -2,10 +2,12 @@ module ras-runner
 
 go 1.18
 
+//replace github.com/usace/hdf5utils => /workspaces/hdf5utils
+
 require (
 	github.com/usace/cc-go-sdk v0.0.0-20230613194210-1928678a0098
 	github.com/usace/go-hdf5 v0.0.0-20230626152743-72d0ae21fd0c
-	github.com/usace/hdf5utils v0.0.0-20230626143148-d37e0dafca2e
+	github.com/usace/hdf5utils v0.0.0-20230731192430-e48a18481e69
 )
 
 require (

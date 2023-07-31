@@ -22,9 +22,14 @@ const (
 	MODEL_DIR    = "/sim/model"
 	MODEL_SCRIPT = "/ras/run-model.sh"
 	GEOM_PREPROC = "/ras/run-geom-preproc.sh"
-	RASTIMEPATH  = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Time"
+	RASTIMEPATH  = "Unsteady Time Series/Time"
 	AWSBUCKET    = "AWS_S3_BUCKET"
 )
+
+func timePath(datapath string) string {
+	tsroot := datapath[:strings.Index(datapath, "Unsteady Time Series")]
+	return tsroot + RASTIMEPATH
+}
 
 var modelPrefix string
 var event int
@@ -305,7 +310,7 @@ func MigrateData(src string, srcstore *cc.DataStore, src_datapath string, dest s
 		ReadOnCreate: true,
 	}
 
-	srcTime, err := hdf5utils.NewHdfDataset(RASTIMEPATH, tsoptions)
+	srcTime, err := hdf5utils.NewHdfDataset(timePath(src_datapath), tsoptions)
 	if err != nil {
 		return err
 	}

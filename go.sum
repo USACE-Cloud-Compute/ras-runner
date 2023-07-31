@@ -24,8 +24,8 @@ github.com/usace/filestore v0.0.0-20230309205740-49d6e1f06e4a/go.mod h1:Q3fxW3tM
 github.com/usace/go-hdf5 v0.0.0-20230610133040-50d751c00c4d/go.mod h1:7UnGKc/bXuT03VYfEx/Od6Jq0zmBMoH0jEVMESxnyLg=
 github.com/usace/go-hdf5 v0.0.0-20230626152743-72d0ae21fd0c h1:JIbvPaU9Z+3Z7tFyeyU1GlN+5vGfpuvbmRVwXhlLO04=
 github.com/usace/go-hdf5 v0.0.0-20230626152743-72d0ae21fd0c/go.mod h1:7UnGKc/bXuT03VYfEx/Od6Jq0zmBMoH0jEVMESxnyLg=
-github.com/usace/hdf5utils v0.0.0-20230626143148-d37e0dafca2e h1:wS/DhFXiWPXGami4CRoxWQpcl1hW9hbk6zMltvRSCCQ=
-github.com/usace/hdf5utils v0.0.0-20230626143148-d37e0dafca2e/go.mod h1:+dMO5KnQ3XKqNi2WPJPyiXdu6nIzm4Lo7FgYVk1Psx0=
+github.com/usace/hdf5utils v0.0.0-20230731192430-e48a18481e69 h1:d1Ko0VOge9VTC1BZvSpPg75zUPNBDMmH67iiiC0btgc=
+github.com/usace/hdf5utils v0.0.0-20230731192430-e48a18481e69/go.mod h1:+dMO5KnQ3XKqNi2WPJPyiXdu6nIzm4Lo7FgYVk1Psx0=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=

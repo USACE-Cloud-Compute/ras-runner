@@ -13,7 +13,7 @@ RUN yum -y update &&\
     yum -y install make &&\
     yum -y install libcurl-devel.x86_64 &&\
     yum -y install openssl-devel.x86_64 &&\
-    mkdir -p /src/ras-runner
+    mkdir -p /src/ras-runner &&\
     mkdir  /ras
     
 
