@@ -79,6 +79,26 @@ func main() {
 			log.Printf("%s::::%s", dest, srcstore)
 			log.Printf("Finished creating temp for %s\n", action.Name)
 			err = CopyHdf5Dataset(src.Paths[0], srcdatapath, srcstore, dest, destdatapath)
+		case "refline-to-boundary-condition":
+			log.Printf("Updating boundary condition %s\n", action.Name)
+			refline := action.Parameters["refline"].(string)
+			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
+			srcdatapath := action.Parameters["src"].(map[string]any)["datapath"].(string)
+			dest := action.Parameters["dest"].(map[string]any)["name"].(string)
+			destdatapath := action.Parameters["dest"].(map[string]any)["datapath"].(string)
+			src, err := pm.GetInputDataSource(srcname)
+			if err != nil {
+				log.Fatalf("Error getting input source %s", srcname)
+			}
+			srcstore, err := pm.GetStore(src.StoreName)
+			if err != nil {
+				log.Fatalf("Error getting input store %s", src.StoreName)
+			}
+			err = MigrateRefLineData(src.Paths[0], srcstore, srcdatapath, dest, destdatapath, refline)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			log.Printf("finished updating boundary condition %s\n", action.Name)
 		case "update-boundary-condition":
 			log.Printf("Updating boundary condition %s\n", action.Name)
 			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
@@ -93,7 +113,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("Error getting input store %s", src.StoreName)
 			}
-			err = MigrateData(src.Paths[0], srcstore, srcdatapath, dest, destdatapath)
+			err = MigrateBoundaryConditionData(src.Paths[0], srcstore, srcdatapath, dest, destdatapath)
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -265,7 +285,127 @@ func encodeUrlPath(src string) string {
 	return srcencoded.String()
 }
 
-func MigrateData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string) error {
+func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, refline string) error {
+	if srcstore.StoreType == "S3" {
+		profile := srcstore.DsProfile
+		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, AWSBUCKET))
+		src = fmt.Sprintf(s3BucketTemplate, bucket, srcstore.Parameters["root"], encodeUrlPath(src))
+	}
+	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
+	if err != nil {
+		return err
+	}
+	defer srcfile.Close()
+
+	srcTime, err := hdf5utils.NewHdfDataset(timePath(src_datapath), hdf5utils.HdfReadOptions{
+		Dtype:        reflect.Float64,
+		File:         srcfile,
+		ReadOnCreate: true,
+	})
+
+	if err != nil {
+		return err
+	}
+	defer srcTime.Close()
+
+	//get the reference line flow dataset
+	refLineVals, err := hdf5utils.NewHdfDataset(src_datapath+"/Flow", hdf5utils.HdfReadOptions{
+		Dtype:        reflect.Float32,
+		File:         srcfile,
+		ReadOnCreate: true,
+	})
+	if err != nil {
+		return err
+	}
+	defer refLineVals.Close()
+
+	//get the reference line positions
+	refLineNames, err := hdf5utils.NewHdfDataset(src_datapath+"/Name", hdf5utils.HdfReadOptions{
+		Dtype:        reflect.String,
+		Strsizes:     hdf5utils.NewHdfStrSet(43),
+		File:         srcfile,
+		ReadOnCreate: true,
+	})
+	if err != nil {
+		return err
+	}
+	defer refLineNames.Close()
+
+	refLineColumnIndex := -1
+	for i := 0; i < refLineNames.Rows(); i++ {
+		name := []string{}
+		err := refLineNames.ReadRow(i, &name)
+		if err != nil || len(name) == 0 {
+			return errors.New("Error reading Reference Line Names")
+		}
+
+		if refline == name[0] {
+			refLineColumnIndex = i
+		}
+	}
+	if refLineColumnIndex < 0 {
+		return errors.New(fmt.Sprintf("Invalid Reference Line: %s\n", refline))
+	}
+
+	destpath := fmt.Sprintf("%s/%s", MODEL_DIR, dest)
+	_, err = os.Stat(destpath)
+
+	var destfile *hdf5.File
+
+	destfile, err = hdf5.OpenFile(destpath, hdf5.F_ACC_RDWR)
+	if err != nil {
+		return err
+	}
+	defer destfile.Close()
+
+	//get a copy of the destination data
+	var destVals *hdf5utils.HdfDataset
+
+	err = func() error {
+		destoptions := hdf5utils.HdfReadOptions{
+			Dtype:        reflect.Float32,
+			File:         destfile,
+			ReadOnCreate: true,
+		}
+		destVals, err = hdf5utils.NewHdfDataset(dest_datapath, destoptions)
+		if err != nil {
+			return err
+		}
+		defer destVals.Close()
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	//create a new dataset
+	boundaryConditionData := make([]float32, destVals.Rows()*2)
+
+	for i := 0; i < destVals.Rows(); i++ {
+		refLineRow := []float32{}
+		err = refLineVals.ReadRow(i, &refLineRow)
+		if err != nil {
+			return err
+		}
+		destRow := []float32{}
+		err = destVals.ReadRow(i, &destRow)
+		if err != nil {
+			return err
+		}
+
+		boundaryConditionData[i*2] = destRow[0]
+		boundaryConditionData[i*2+1] = refLineRow[refLineColumnIndex]
+	}
+	//write the new boundary condition buffer back to the destiation dataset
+	destWriter, err := destfile.OpenDataset(dest_datapath)
+	if err != nil {
+		return err
+	}
+	defer destWriter.Close()
+	return destWriter.Write(&boundaryConditionData)
+}
+
+func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string) error {
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, AWSBUCKET))
