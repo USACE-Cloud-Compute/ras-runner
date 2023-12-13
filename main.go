@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/usace/cc-go-sdk"
@@ -80,6 +81,7 @@ func main() {
 			log.Printf("Finished creating temp for %s\n", action.Name)
 			err = CopyHdf5Dataset(src.Paths[0], srcdatapath, srcstore, dest, destdatapath)
 		case "refline-to-boundary-condition":
+			//@TODO need string length
 			log.Printf("Updating boundary condition %s\n", action.Name)
 			refline := action.Parameters["refline"].(string)
 			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
@@ -114,6 +116,30 @@ func main() {
 				log.Fatalf("Error getting input store %s", src.StoreName)
 			}
 			err = MigrateBoundaryConditionData(src.Paths[0], srcstore, srcdatapath, dest, destdatapath)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			log.Printf("finished updating boundary condition %s\n", action.Name)
+		case "column-to-boundary-condition":
+			log.Printf("Updating boundary condition %s\n", action.Name)
+			column_index := action.Parameters["column-index"].(string)
+			readcol, err := strconv.Atoi(column_index)
+			if err != nil {
+				log.Fatalf("Invalid column index: %s\n", column_index)
+			}
+			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
+			srcdatapath := action.Parameters["src"].(map[string]any)["datapath"].(string)
+			dest := action.Parameters["dest"].(map[string]any)["name"].(string)
+			destdatapath := action.Parameters["dest"].(map[string]any)["datapath"].(string)
+			src, err := pm.GetInputDataSource(srcname)
+			if err != nil {
+				log.Fatalf("Error getting input source %s", srcname)
+			}
+			srcstore, err := pm.GetStore(src.StoreName)
+			if err != nil {
+				log.Fatalf("Error getting input store %s", src.StoreName)
+			}
+			err = MigrateColumnData(src.Paths[0], srcstore, srcdatapath, dest, destdatapath, readcol)
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -241,6 +267,37 @@ func CopyHdf5Dataset(src string, srcdataset string, srcstore *cc.DataStore, dest
 		return err
 	}
 	return nil
+}
+
+func getRowVal2(srcVals *hdf5utils.HdfDataset, srcTimes *hdf5utils.HdfDataset, timeval float32, readcol int) (float32, error) {
+	numcols := srcVals.Dims()[1]
+	//
+	srcdata := make([]float32, numcols)
+	srctime := make([]float64, 1)
+
+	if timeval <= 0.0 {
+		err := srcVals.ReadRow(0, &srcdata)
+		if err != nil {
+			return 0, err
+		}
+		return srcdata[0], nil
+	}
+
+	for i := 0; i < srcVals.Rows(); i++ {
+		err := srcVals.ReadRow(i, &srcdata)
+		if err != nil {
+			return 0, err
+		}
+		err = srcTimes.ReadRow(i, &srctime)
+		if err != nil {
+			return 0, err
+		}
+
+		if math.Abs(float64(timeval)-srctime[0]) < tolerance {
+			return srcdata[readcol-1], nil
+		}
+	}
+	return 0, errors.New(fmt.Sprintf("Unable to find corresponding input source record for time %f", timeval))
 }
 
 func getRowVal(srcVals *hdf5utils.HdfDataset, srcTimes *hdf5utils.HdfDataset, timeval float32) (float32, error) {
@@ -488,6 +545,110 @@ func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapa
 		}
 
 		val, err := getRowVal(srcVals, srcTime, destRow[0])
+		if err != nil {
+			return err
+		}
+
+		boundaryConditionData[i*2] = destRow[0]
+		boundaryConditionData[i*2+1] = val
+	}
+
+	//write the new boundary condition buffer back to the destiation dataset
+	destWriter, err := destfile.OpenDataset(dest_datapath)
+	if err != nil {
+		return err
+	}
+	defer destWriter.Close()
+	err = destWriter.Write(&boundaryConditionData)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, readcol int) error {
+	if srcstore.StoreType == "S3" {
+		profile := srcstore.DsProfile
+		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, AWSBUCKET))
+		src = fmt.Sprintf(s3BucketTemplate, bucket, srcstore.Parameters["root"], encodeUrlPath(src))
+	}
+	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
+	if err != nil {
+		return err
+	}
+	defer srcfile.Close()
+
+	destpath := fmt.Sprintf("%s/%s", MODEL_DIR, dest)
+	_, err = os.Stat(destpath)
+
+	var destfile *hdf5.File
+
+	destfile, err = hdf5.OpenFile(destpath, hdf5.F_ACC_RDWR)
+	if err != nil {
+		return err
+	}
+	defer destfile.Close()
+
+	//Get the data values from the source file
+	//this is the RAS model output
+	options := hdf5utils.HdfReadOptions{
+		Dtype:        reflect.Float32,
+		File:         srcfile,
+		ReadOnCreate: true,
+	}
+
+	srcVals, err := hdf5utils.NewHdfDataset(src_datapath, options)
+	if err != nil {
+		return err
+	}
+	defer srcVals.Close()
+
+	//Get the times corresponding to the source file values
+
+	tsoptions := hdf5utils.HdfReadOptions{
+		Dtype:        reflect.Float64,
+		File:         srcfile,
+		ReadOnCreate: true,
+	}
+
+	srcTime, err := hdf5utils.NewHdfDataset(timePath(src_datapath), tsoptions)
+	if err != nil {
+		return err
+	}
+	defer srcTime.Close()
+
+	//Get a copy of the destination dataset
+	var destVals *hdf5utils.HdfDataset
+
+	err = func() error {
+		destoptions := hdf5utils.HdfReadOptions{
+			Dtype:        reflect.Float32,
+			File:         destfile,
+			ReadOnCreate: true,
+		}
+		destVals, err = hdf5utils.NewHdfDataset(dest_datapath, destoptions)
+		if err != nil {
+			return err
+		}
+		defer destVals.Close()
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	//create a new buffer with mutated boundary conditions
+	boundaryConditionData := make([]float32, destVals.Rows()*2)
+
+	for i := 0; i < destVals.Rows(); i++ {
+
+		destRow := make([]float32, 2)
+		err := destVals.ReadRow(i, &destRow)
+		if err != nil {
+			return err
+		}
+
+		val, err := getRowVal2(srcVals, srcTime, destRow[0], readcol)
 		if err != nil {
 			return err
 		}
