@@ -26,7 +26,7 @@ RUN wget ${NEXUS_RAS_URL} &&\
     chmod -R +x /ras/* 
 
 
-COPY go.mod main.go /src/ras-runner
+COPY go.mod main.go /src/ras-runner/
 
 #set up Go
 RUN wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
