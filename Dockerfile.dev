@@ -29,8 +29,8 @@ RUN wget ${NEXUS_RAS_URL} &&\
 COPY go.mod main.go /src/ras-runner/
 
 #set up Go
-RUN wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
-    tar -xvzf /go1.18.1.linux-amd64.tar.gz -C / 
+RUN wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz -P / &&\
+    tar -xvzf go1.21.5.linux-amd64.tar.gz -C / 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
 ENV PATH=/go/bin:$PATH
