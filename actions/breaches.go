@@ -47,8 +47,9 @@ func splitRowsIntoCells(row string, cellSize int) ([]string, error) {
 
 	for i := 0; i < numCells; i++ {
 		var startIndex int = 0 + i*cellSize
-		var endIndex int = startIndex + cellSize // start index is inclusive, end is not. So no -1.
-		result[i] = row[startIndex:endIndex]
+		var endIndex int = startIndex + cellSize          // start index is inclusive, end is not. So no -1.
+		result = append(result, row[startIndex:endIndex]) // we can treat strings as an array of chars.
 	}
+
 	return result, nil
 }
