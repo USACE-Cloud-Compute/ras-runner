@@ -3,7 +3,9 @@ package actions
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"log"
+	"math"
 	"os"
 	"strings"
 	"unicode"
@@ -12,6 +14,7 @@ import (
 const rowLengthCellSizeError string = "the row was not able to be divided evenly by the cell size without remainder. Ensure the b-file has not been modified outside of RAS"
 const breachDataHeader string = "Breach Data"
 
+// get a slice of rows (which are slices of string cells) that represents all the breach data in the b-file
 func getBreachRows(bfilePath string) [][]string {
 	var breachDataRows [][]string
 
@@ -30,7 +33,7 @@ func getBreachRows(bfilePath string) [][]string {
 			scanner.Scan()                                 //next line
 			var firstLetter rune = rune(scanner.Text()[0]) //first letter as a rune / kinda like a char.
 			for !unicode.IsLetter(firstLetter) {           // until we hit another header, keep going
-				row, err := splitRowsIntoCells(scanner.Text(), 8)
+				row, err := splitRowsIntoCells(scanner.Text())
 				if err != nil {
 					log.Fatal(err)
 					return nil
@@ -46,12 +49,14 @@ func getBreachRows(bfilePath string) [][]string {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+
 	return breachDataRows
 }
 
 // The b file is formated into columns 8 characters wide.
 // This function returns a row as a string array of "cells" 8 char wide.
-func splitRowsIntoCells(row string, cellSize int) ([]string, error) {
+func splitRowsIntoCells(row string) ([]string, error) {
+	var cellSize int = 8 // RAS B file format.
 	var lengthOfRow int = len(row)
 	var result []string
 
@@ -70,4 +75,26 @@ func splitRowsIntoCells(row string, cellSize int) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+func convertFloatToBfileCellValue(fl float64) string {
+	// Round the float to 8 digits
+	rounded := math.Round(fl*1e8) / 1e8
+
+	// Convert the float to a string with 8 characters
+	result := fmt.Sprintf("%8.8f", rounded)
+
+	// If the result has more than 8 characters, it means rounding introduced more digits
+	// Trim the excess characters
+	if len(result) > 8 {
+		result = result[:8]
+	}
+
+	return result
+}
+
+// This assumes no mass wasting. Only concerned with finding trigger elevation.
+func readBreachData(breachRows [][]string) {
+	//numBreachingStructures, _ := strconv.Atoi(breachRows[0][0])//row 0 column 0s
+
 }
