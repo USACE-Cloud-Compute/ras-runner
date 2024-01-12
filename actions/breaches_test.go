@@ -1,10 +1,11 @@
 package actions
 
 import (
+	"fmt"
 	"testing"
 )
 
-const oneBreachBFile string = "/workspaces/cc-ras-runner/actions/testResources/DamBreachOverlapDem.b01"
+const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverlapDem.b01"
 
 func TestBreaching(t *testing.T) {
 	getBreachRows(oneBreachBFile)
@@ -29,4 +30,34 @@ func TestConvertFloatToBcellValue(t *testing.T) {
 	if cellValue != expected {
 		t.Fail()
 	}
+}
+
+func TestEditFailureElevationData(t *testing.T) {
+	row := make([]string, 1)
+	row[0] = convertFloatToBfileCellValue(123.4)
+
+	rows := [][]string{}
+
+	rows = append(rows, row)
+	rows = append(rows, row)
+	rows = append(rows, row)
+	rows = append(rows, row)
+	rows = append(rows, row)
+
+	bd := BreachData{
+		FailureElevationRowNum: 1,
+		BreachDataRows:         rows,
+	}
+	fmt.Print(bd)
+	func(data *BreachData) {
+		err := data.updateFailureElevation(65432)
+		if err != nil {
+			t.Fail()
+		}
+	}(&bd)
+	fmt.Print(bd)
+
+	bd.updateFailureElevation(432.1)
+	fmt.Print(bd)
+
 }
