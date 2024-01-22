@@ -7,12 +7,23 @@ import (
 
 const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverlapDem.b01"
 
-func TestBreaching(t *testing.T) {
+func TestGetBreachRows(t *testing.T) {
 	rows, err := getBreachRows(oneBreachBFile)
 	if err != nil || rows == nil {
 		t.Fail()
 	}
 
+}
+
+func TestGetBreachData(t *testing.T) {
+	rows, err := getBreachRows(oneBreachBFile)
+	if err != nil || rows == nil {
+		t.Fail()
+	}
+	bd := BreakBreachDataOutForSeparateStructures(rows)
+	if bd == nil {
+		t.Fail()
+	}
 }
 
 func TestRowsIntoCells(t *testing.T) {

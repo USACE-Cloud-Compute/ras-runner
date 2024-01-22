@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -48,15 +49,17 @@ func getBreachRows(bfilePath string) ([][]string, error) {
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), breachDataHeader) {
 			scanner.Scan() // next line
+			isBreachData := true
 			var rowText = scanner.Text()
-			rowIsBreachData := rowIsBreachData(rowText)
-			for rowIsBreachData { // until we hit another header or empty line, keep going
+			for isBreachData { // until we hit another header or empty line, keep going
 				row, err := splitRowsIntoCells(rowText)
 				if err != nil {
 					return breachDataRows, err
 				}
 				breachDataRows = append(breachDataRows, row)
 				scanner.Scan()
+				rowText = scanner.Text()
+				isBreachData = rowIsBreachData(rowText)
 			}
 			if breachDataRows != nil {
 				break
@@ -136,8 +139,70 @@ func convertFloatToBfileCellValue(fl float64) string {
 	return result
 }
 
-// This assumes no mass wasting. Only concerned with finding trigger elevation.
-func readBreachData(breachRows [][]string) {
-	//numBreachingStructures, _ := strconv.Atoi(breachRows[0][0])//row 0 column 0s
+func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) int {
+	rowCount := 8
+	if !getRow2Exists(rows, firstRowIndex) {
+		rowCount -= 1
+	}
+	if !getRow7and8Exist(rows, firstRowIndex) {
+		rowCount -= 2
+	}
+	return rowCount
+}
+
+func getStartingElevationRowIndex(rows [][]string, firstRowIndex int) int {
+	if getRow2Exists(rows, firstRowIndex) {
+		return 2
+	}
+	return 1
+}
+
+func getRow2Exists(rows [][]string, firstRowIndex int) bool {
+	columnIndexMassWasting := 13
+	cellValueMassWasting := rows[firstRowIndex][columnIndexMassWasting]
+	MassWastingIndex, _ := getIntFromCellValue(cellValueMassWasting)
+	if MassWastingIndex == 0 || MassWastingIndex == 1 {
+		return true
+	}
+	return false
+}
+
+func getIntFromCellValue(cell string) (int, error) {
+	trimmedCell := strings.TrimSpace(cell)
+	return strconv.Atoi(trimmedCell)
+}
+
+func getRow7and8Exist(rows [][]string, firstRowIndex int) bool {
+	columnIndexBreachMethod := 10
+	cellValueBreachMethod := rows[firstRowIndex][columnIndexBreachMethod]
+	breachMethodIndex, _ := getIntFromCellValue(cellValueBreachMethod)
+	return breachMethodIndex == 1
+}
+
+func BreakBreachDataOutForSeparateStructures(rows [][]string) []BreachData {
+	var breachdatas []BreachData
+
+	numBreachingStructures, err := getIntFromCellValue(rows[0][0])
+	if err != nil {
+		panic(err)
+	}
+
+	structureFirstRowIndex := 1
+
+	for i := 0; i < numBreachingStructures; i++ {
+
+		//create a BreachData Object
+		numRowsInStructureBreachData := numRowsForStructureInBreachData(rows, structureFirstRowIndex)
+		startingElevationRowIndex := getStartingElevationRowIndex(rows, structureFirstRowIndex)
+		specificRows := rows[structureFirstRowIndex:numRowsInStructureBreachData]
+		bd := InitBreachData(startingElevationRowIndex, specificRows)
+
+		//add it to the list
+		breachdatas = append(breachdatas, bd)
+
+		//update first row index for the next guy.
+		structureFirstRowIndex = structureFirstRowIndex + numRowsInStructureBreachData
+	}
+	return breachdatas
 
 }
