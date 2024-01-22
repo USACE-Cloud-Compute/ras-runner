@@ -8,7 +8,10 @@ import (
 const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverlapDem.b01"
 
 func TestBreaching(t *testing.T) {
-	getBreachRows(oneBreachBFile)
+	rows, err := getBreachRows(oneBreachBFile)
+	if err != nil || rows == nil {
+		t.Fail()
+	}
 
 }
 

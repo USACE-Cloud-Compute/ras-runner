@@ -48,9 +48,10 @@ func getBreachRows(bfilePath string) ([][]string, error) {
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), breachDataHeader) {
 			scanner.Scan() // next line
-			rowIsBreachData, _ := rowIsNotAHeader(scanner.Text())
-			for rowIsBreachData { // until we hit another header, keep going
-				row, err := splitRowsIntoCells(scanner.Text())
+			var rowText = scanner.Text()
+			rowIsBreachData := rowIsBreachData(rowText)
+			for rowIsBreachData { // until we hit another header or empty line, keep going
+				row, err := splitRowsIntoCells(rowText)
 				if err != nil {
 					return breachDataRows, err
 				}
@@ -64,15 +65,36 @@ func getBreachRows(bfilePath string) ([][]string, error) {
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
 
 	return breachDataRows, nil
 }
 
-func rowIsNotAHeader(row string) (bool, error) {
+// Checks that We're not a header and not white space
+func rowIsBreachData(row string) bool {
+	if rowIsNotAHeader(row) && rowIsNotWhiteSpace(row) {
+		return true
+	}
+	return false
+}
+
+// /Headers always start with a letter, Checks if the row starts with a letter, if it doesn't, returns false.
+func rowIsNotAHeader(row string) bool {
 	var firstLetter rune = rune(row[0]) //first letter as a rune / kinda like a char.
 	isAHeader := unicode.IsLetter(firstLetter)
-	return !isAHeader, nil
+	return !isAHeader
+}
+
+// /checks that a row isn't completely empty. if it is, return true, if not, false.
+func rowIsNotWhiteSpace(row string) bool {
+	for i := 0; i < len(row); i++ {
+		charecter := row[i]
+		if !unicode.IsSpace(rune(charecter)) {
+			return true
+		}
+	}
+	return false
 }
 
 // The b file is formated into columns 8 characters wide.
