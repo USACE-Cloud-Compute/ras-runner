@@ -3,4 +3,4 @@ HEC-RAS_610_Linux.zip
 .devcontainer/devcontainer.json
 RAS_Linux_test_setup.zip
 .vs/
-actions/
+actions/_*
