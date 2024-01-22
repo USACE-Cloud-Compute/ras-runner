@@ -140,14 +140,42 @@ func convertFloatToBfileCellValue(fl float64) string {
 }
 
 func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) int {
-	rowCount := 8
-	if !getRow2Exists(rows, firstRowIndex) {
-		rowCount -= 1
+	rowCount := 5
+	var ProgOrdNumIndex int
+	row2Exists := getRow2Exists(rows, firstRowIndex)
+	row7and8Exist := getRow7and8Exist(rows, firstRowIndex)
+
+	//row 5 tells us how many progression or downcutting ordinates we have, which can add extra rows. The existance of row 2 tells us what row that ordinate number is on.
+	if row2Exists {
+		rowCount += 1
+		ProgOrdNumIndex = firstRowIndex + 4
+	} else {
+		ProgOrdNumIndex = firstRowIndex + 3
 	}
-	if !getRow7and8Exist(rows, firstRowIndex) {
-		rowCount -= 2
+
+	//additional rows from progression/owncutting
+	additionalRows := additionalRowsFromStoredOrdinates(rows, ProgOrdNumIndex)
+	rowCount += additionalRows
+
+	//rows 7 and 8 only exist for the simplified physical breaching method. They are the number of oridnates, and a list of ordinates respectively.
+	if row7and8Exist {
+		rowCount += 2
+		DowncuttingOrdNumIndex := firstRowIndex + rowCount - 1
+		additionalRows = additionalRowsFromStoredOrdinates(rows, DowncuttingOrdNumIndex)
+		rowCount += additionalRows
 	}
+
 	return rowCount
+}
+
+func additionalRowsFromStoredOrdinates(rows [][]string, ProgOrdNumIndex int) int {
+	ProgOrdNum, _ := getIntFromCellValue(rows[ProgOrdNumIndex][0])
+	partialRow := 0
+	if ProgOrdNum%5 != 0 {
+		partialRow = 1
+	}
+	fullRow := ProgOrdNum / 5
+	return partialRow + fullRow
 }
 
 func getStartingElevationRowIndex(rows [][]string, firstRowIndex int) int {

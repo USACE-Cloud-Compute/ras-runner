@@ -6,6 +6,7 @@ import (
 )
 
 const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverlapDem.b01"
+const multiBreachBFile string = "/workspaces/cc-ras-runner/TestData/multiDamBreach.b01"
 
 func TestGetBreachRows(t *testing.T) {
 	rows, err := getBreachRows(oneBreachBFile)
@@ -16,7 +17,7 @@ func TestGetBreachRows(t *testing.T) {
 }
 
 func TestGetBreachData(t *testing.T) {
-	rows, err := getBreachRows(oneBreachBFile)
+	rows, err := getBreachRows(multiBreachBFile)
 	if err != nil || rows == nil {
 		t.Fail()
 	}
