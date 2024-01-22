@@ -140,7 +140,7 @@ func convertFloatToBfileCellValue(fl float64) string {
 }
 
 func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) int {
-	rowCount := 5
+	rowCount := 3 // doesn't include any coordinate rows.
 	var ProgOrdNumIndex int
 	row2Exists := getRow2Exists(rows, firstRowIndex)
 	row7and8Exist := getRow7and8Exist(rows, firstRowIndex)
@@ -154,13 +154,14 @@ func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) int {
 	}
 
 	//additional rows from progression/owncutting
+	rowCount += 1 //for the count of coordinates
 	additionalRows := additionalRowsFromStoredOrdinates(rows, ProgOrdNumIndex)
 	rowCount += additionalRows
 
 	//rows 7 and 8 only exist for the simplified physical breaching method. They are the number of oridnates, and a list of ordinates respectively.
 	if row7and8Exist {
-		rowCount += 2
-		DowncuttingOrdNumIndex := firstRowIndex + rowCount - 1
+		rowCount += 1 //for the count of coordinates
+		DowncuttingOrdNumIndex := firstRowIndex + rowCount
 		additionalRows = additionalRowsFromStoredOrdinates(rows, DowncuttingOrdNumIndex)
 		rowCount += additionalRows
 	}
@@ -180,19 +181,17 @@ func additionalRowsFromStoredOrdinates(rows [][]string, ProgOrdNumIndex int) int
 
 func getStartingElevationRowIndex(rows [][]string, firstRowIndex int) int {
 	if getRow2Exists(rows, firstRowIndex) {
-		return 2
+		return 3
 	}
-	return 1
+	return 2
 }
 
+// row 2 only exists if we're using mass wasting, which as indicated by a 1 in column index 13. if not, it's a 0
 func getRow2Exists(rows [][]string, firstRowIndex int) bool {
 	columnIndexMassWasting := 13
 	cellValueMassWasting := rows[firstRowIndex][columnIndexMassWasting]
 	MassWastingIndex, _ := getIntFromCellValue(cellValueMassWasting)
-	if MassWastingIndex == 0 || MassWastingIndex == 1 {
-		return true
-	}
-	return false
+	return MassWastingIndex == 1
 }
 
 func getIntFromCellValue(cell string) (int, error) {
@@ -201,7 +200,7 @@ func getIntFromCellValue(cell string) (int, error) {
 }
 
 func getRow7and8Exist(rows [][]string, firstRowIndex int) bool {
-	columnIndexBreachMethod := 10
+	columnIndexBreachMethod := 9
 	cellValueBreachMethod := rows[firstRowIndex][columnIndexBreachMethod]
 	breachMethodIndex, _ := getIntFromCellValue(cellValueBreachMethod)
 	return breachMethodIndex == 1
@@ -222,7 +221,7 @@ func BreakBreachDataOutForSeparateStructures(rows [][]string) []BreachData {
 		//create a BreachData Object
 		numRowsInStructureBreachData := numRowsForStructureInBreachData(rows, structureFirstRowIndex)
 		startingElevationRowIndex := getStartingElevationRowIndex(rows, structureFirstRowIndex)
-		specificRows := rows[structureFirstRowIndex:numRowsInStructureBreachData]
+		specificRows := rows[structureFirstRowIndex:(structureFirstRowIndex + numRowsInStructureBreachData)]
 		bd := InitBreachData(startingElevationRowIndex, specificRows)
 
 		//add it to the list
