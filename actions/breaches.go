@@ -15,6 +15,8 @@ import (
 const rowLengthCellSizeError string = "the row was not able to be divided evenly by the cell size without remainder. Ensure the b-file has not been modified outside of RAS"
 const breachDataHeader string = "Breach Data"
 
+// Parsing of these files is guided by the investigation here: https://www.hec.usace.army.mil/confluence/display/FFRD/Deciphering+Breach+Data+in+Intermediate+Files
+// nomenclature used in comments, as well as method and variable names is done to reflect the language on the above page.
 type BreachData struct {
 	FailureElevationRowNum int
 	BreachDataRows         [][]string
@@ -139,11 +141,17 @@ func convertFloatToBfileCellValue(fl float64) string {
 	return result
 }
 
-func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) int {
+func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) (int, error) {
 	rowCount := 3 // doesn't include any coordinate rows.
 	var ProgOrdNumIndex int
-	row2Exists := getRow2Exists(rows, firstRowIndex)
-	row7and8Exist := getRow7and8Exist(rows, firstRowIndex)
+	row2Exists, err := getRow2Exists(rows, firstRowIndex)
+	if err != nil {
+		return 0, err
+	}
+	row7and8Exist, err := getRow7and8Exist(rows, firstRowIndex)
+	if err != nil {
+		return 0, err
+	}
 
 	//row 5 tells us how many progression or downcutting ordinates we have, which can add extra rows. The existance of row 2 tells us what row that ordinate number is on.
 	if row2Exists {
@@ -155,43 +163,59 @@ func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) int {
 
 	//additional rows from progression/owncutting
 	rowCount += 1 //for the count of coordinates
-	additionalRows := additionalRowsFromStoredOrdinates(rows, ProgOrdNumIndex)
+	additionalRows, err := additionalRowsFromStoredOrdinates(rows, ProgOrdNumIndex)
+	if err != nil {
+		return 0, err
+	}
 	rowCount += additionalRows
 
 	//rows 7 and 8 only exist for the simplified physical breaching method. They are the number of oridnates, and a list of ordinates respectively.
 	if row7and8Exist {
 		rowCount += 1 //for the count of coordinates
 		DowncuttingOrdNumIndex := firstRowIndex + rowCount
-		additionalRows = additionalRowsFromStoredOrdinates(rows, DowncuttingOrdNumIndex)
+		additionalRows, err = additionalRowsFromStoredOrdinates(rows, DowncuttingOrdNumIndex)
+		if err != nil {
+			return 0, err
+		}
 		rowCount += additionalRows
 	}
 
-	return rowCount
+	return rowCount, nil
 }
 
-func additionalRowsFromStoredOrdinates(rows [][]string, ProgOrdNumIndex int) int {
-	ProgOrdNum, _ := getIntFromCellValue(rows[ProgOrdNumIndex][0])
+func additionalRowsFromStoredOrdinates(rows [][]string, ProgOrdNumIndex int) (int, error) {
+	ProgOrdNum, err := getIntFromCellValue(rows[ProgOrdNumIndex][0])
+	if err != nil {
+		return 0, err
+	}
 	partialRow := 0
 	if ProgOrdNum%5 != 0 {
 		partialRow = 1
 	}
 	fullRow := ProgOrdNum / 5
-	return partialRow + fullRow
+	return (partialRow + fullRow), err
 }
 
-func getStartingElevationRowIndex(rows [][]string, firstRowIndex int) int {
-	if getRow2Exists(rows, firstRowIndex) {
-		return 3
+func getStartingElevationRowIndex(rows [][]string, firstRowIndex int) (int, error) {
+	row2exists, err := getRow2Exists(rows, firstRowIndex)
+	if err != nil {
+		return 0, err
 	}
-	return 2
+	if row2exists {
+		return 3, nil
+	}
+	return 2, nil
 }
 
 // row 2 only exists if we're using mass wasting, which as indicated by a 1 in column index 13. if not, it's a 0
-func getRow2Exists(rows [][]string, firstRowIndex int) bool {
+func getRow2Exists(rows [][]string, firstRowIndex int) (bool, error) {
 	columnIndexMassWasting := 13
 	cellValueMassWasting := rows[firstRowIndex][columnIndexMassWasting]
-	MassWastingIndex, _ := getIntFromCellValue(cellValueMassWasting)
-	return MassWastingIndex == 1
+	MassWastingIndex, err := getIntFromCellValue(cellValueMassWasting)
+	if err != nil {
+		return false, err
+	}
+	return (MassWastingIndex == 1), nil
 }
 
 func getIntFromCellValue(cell string) (int, error) {
@@ -199,14 +223,17 @@ func getIntFromCellValue(cell string) (int, error) {
 	return strconv.Atoi(trimmedCell)
 }
 
-func getRow7and8Exist(rows [][]string, firstRowIndex int) bool {
+func getRow7and8Exist(rows [][]string, firstRowIndex int) (bool, error) {
 	columnIndexBreachMethod := 9
 	cellValueBreachMethod := rows[firstRowIndex][columnIndexBreachMethod]
-	breachMethodIndex, _ := getIntFromCellValue(cellValueBreachMethod)
-	return breachMethodIndex == 1
+	breachMethodIndex, err := getIntFromCellValue(cellValueBreachMethod)
+	if err != nil {
+		return false, err
+	}
+	return (breachMethodIndex == 1), nil
 }
 
-func BreakBreachDataOutForSeparateStructures(rows [][]string) []BreachData {
+func BreakBreachDataOutForSeparateStructures(rows [][]string) ([]BreachData, error) {
 	var breachdatas []BreachData
 
 	numBreachingStructures, err := getIntFromCellValue(rows[0][0])
@@ -219,8 +246,14 @@ func BreakBreachDataOutForSeparateStructures(rows [][]string) []BreachData {
 	for i := 0; i < numBreachingStructures; i++ {
 
 		//create a BreachData Object
-		numRowsInStructureBreachData := numRowsForStructureInBreachData(rows, structureFirstRowIndex)
-		startingElevationRowIndex := getStartingElevationRowIndex(rows, structureFirstRowIndex)
+		numRowsInStructureBreachData, err := numRowsForStructureInBreachData(rows, structureFirstRowIndex)
+		if err != nil {
+			return nil, err
+		}
+		startingElevationRowIndex, err := getStartingElevationRowIndex(rows, structureFirstRowIndex)
+		if err != nil {
+			return nil, err
+		}
 		specificRows := rows[structureFirstRowIndex:(structureFirstRowIndex + numRowsInStructureBreachData)]
 		bd := InitBreachData(startingElevationRowIndex, specificRows)
 
@@ -230,6 +263,5 @@ func BreakBreachDataOutForSeparateStructures(rows [][]string) []BreachData {
 		//update first row index for the next guy.
 		structureFirstRowIndex = structureFirstRowIndex + numRowsInStructureBreachData
 	}
-	return breachdatas
-
+	return breachdatas, nil
 }

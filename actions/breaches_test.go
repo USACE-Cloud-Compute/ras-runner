@@ -21,8 +21,8 @@ func TestGetBreachData(t *testing.T) {
 	if err != nil || rows == nil {
 		t.Fail()
 	}
-	bd := BreakBreachDataOutForSeparateStructures(rows)
-	if bd == nil {
+	bd, err := BreakBreachDataOutForSeparateStructures(rows)
+	if bd == nil || err != nil {
 		t.Fail()
 	}
 }
