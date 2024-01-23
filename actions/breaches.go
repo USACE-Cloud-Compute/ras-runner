@@ -34,6 +34,15 @@ func (bd BreachData) updateFailureElevation(newFailureElevation float64) error {
 	return nil
 }
 
+func (bd BreachData) getUnetID() (int, error) {
+	cellValue := bd.BreachDataRows[0][0] //Always the first cell for a set of structure breach data.
+	id, err := getIntFromCellValue(cellValue)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
 // get a slice of rows (which are slices of string cells) that represents all the breach data in the b-file
 func getBreachRows(bfilePath string) ([][]string, error) {
 	var breachDataRows [][]string
@@ -74,6 +83,16 @@ func getBreachRows(bfilePath string) ([][]string, error) {
 	}
 
 	return breachDataRows, nil
+}
+
+func writeBreachRows(bds []BreachData, bfilePath string) error {
+	file, err := os.Open(bfilePath)
+	if err != nil {
+		return err
+	}
+	//close the file when we're done
+	defer file.Close()
+	return nil
 }
 
 // Checks that We're not a header and not white space
