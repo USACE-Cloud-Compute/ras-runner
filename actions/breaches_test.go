@@ -9,7 +9,8 @@ const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverl
 const multiBreachBFile string = "/workspaces/cc-ras-runner/TestData/multiDamBreach.b01"
 
 func TestGetBreachRows(t *testing.T) {
-	rows, err := getBreachRows(oneBreachBFile)
+	bf := InitBFile(oneBreachBFile)
+	rows, err := bf.getBreachRows()
 	if err != nil || rows == nil {
 		t.Fail()
 	}
@@ -17,18 +18,20 @@ func TestGetBreachRows(t *testing.T) {
 }
 
 func TestGetBreachData(t *testing.T) {
-	rows, err := getBreachRows(multiBreachBFile)
+	bf := InitBFile(oneBreachBFile)
+	rows, err := bf.getBreachRows()
 	if err != nil || rows == nil {
 		t.Fail()
 	}
-	bd, err := BreakBreachDataOutForSeparateStructures(rows)
+	bd, err := bf.rowToBreachData(rows)
 	if bd == nil || err != nil {
 		t.Fail()
 	}
 }
 
 func TestRowsIntoCells(t *testing.T) {
-	row, err := splitRowsIntoCells("000000010000004500000005")
+	var bf Bfile = Bfile{Filename: ""}
+	row, err := bf.splitRowsIntoCells("000000010000004500000005")
 	expected := []string{"00000001", "00000045", "00000005"}
 	if err == nil {
 		for i := 0; i < len(row); i++ {
@@ -40,7 +43,8 @@ func TestRowsIntoCells(t *testing.T) {
 }
 
 func TestConvertFloatToBcellValue(t *testing.T) {
-	cellValue := convertFloatToBfileCellValue(450.456)
+	var bd BreachData = BreachData{}
+	cellValue := bd.convertFloatToBfileCellValue(450.456)
 	expected := "450.4560"
 	if cellValue != expected {
 		t.Fail()
@@ -49,7 +53,8 @@ func TestConvertFloatToBcellValue(t *testing.T) {
 
 func TestEditFailureElevationData(t *testing.T) {
 	row := make([]string, 1)
-	row[0] = convertFloatToBfileCellValue(123.4)
+	var bd BreachData = BreachData{}
+	row[0] = bd.convertFloatToBfileCellValue(123.4)
 
 	rows := [][]string{}
 
@@ -59,7 +64,7 @@ func TestEditFailureElevationData(t *testing.T) {
 	rows = append(rows, row)
 	rows = append(rows, row)
 
-	bd := BreachData{
+	bd = BreachData{
 		FailureElevationRowNum: 1,
 		BreachDataRows:         rows,
 	}

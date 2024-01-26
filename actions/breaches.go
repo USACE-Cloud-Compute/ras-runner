@@ -30,7 +30,7 @@ func InitBreachData(rowNumber int, breachDataRows [][]string) BreachData {
 }
 
 func (bd BreachData) updateFailureElevation(newFailureElevation float64) error {
-	bd.BreachDataRows[bd.FailureElevationRowNum][0] = convertFloatToBfileCellValue(newFailureElevation)
+	bd.BreachDataRows[bd.FailureElevationRowNum][0] = bd.convertFloatToBfileCellValue(newFailureElevation)
 	return nil
 }
 
@@ -43,11 +43,21 @@ func (bd BreachData) getUnetID() (int, error) {
 	return id, nil
 }
 
+type Bfile struct {
+	Filename string
+}
+
+func InitBFile(bfilePath string) Bfile {
+	return Bfile{
+		Filename: bfilePath,
+	}
+}
+
 // get a slice of rows (which are slices of string cells) that represents all the breach data in the b-file
-func getBreachRows(bfilePath string) ([][]string, error) {
+func (bf Bfile) getBreachRows() ([][]string, error) {
 	var breachDataRows [][]string
 
-	file, err := os.Open(bfilePath)
+	file, err := os.Open(bf.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -63,14 +73,14 @@ func getBreachRows(bfilePath string) ([][]string, error) {
 			isBreachData := true
 			var rowText = scanner.Text()
 			for isBreachData { // until we hit another header or empty line, keep going
-				row, err := splitRowsIntoCells(rowText)
+				row, err := bf.splitRowsIntoCells(rowText)
 				if err != nil {
 					return breachDataRows, err
 				}
 				breachDataRows = append(breachDataRows, row)
 				scanner.Scan()
 				rowText = scanner.Text()
-				isBreachData = rowIsBreachData(rowText)
+				isBreachData = bf.rowIsBreachData(rowText)
 			}
 			if breachDataRows != nil {
 				break
@@ -85,33 +95,27 @@ func getBreachRows(bfilePath string) ([][]string, error) {
 	return breachDataRows, nil
 }
 
-func writeBreachRows(bds []BreachData, bfilePath string) error {
-	file, err := os.Open(bfilePath)
-	if err != nil {
-		return err
-	}
-	//close the file when we're done
-	defer file.Close()
-	return nil
+func (bf Bfile) WriteBreachRows(bds []BreachData, bfilePath string) ([]byte, error) {
+	return nil, nil
 }
 
 // Checks that We're not a header and not white space
-func rowIsBreachData(row string) bool {
-	if rowIsNotAHeader(row) && rowIsNotWhiteSpace(row) {
+func (bf Bfile) rowIsBreachData(row string) bool {
+	if bf.rowIsNotAHeader(row) && bf.rowIsNotWhiteSpace(row) {
 		return true
 	}
 	return false
 }
 
 // /Headers always start with a letter, Checks if the row starts with a letter, if it doesn't, returns false.
-func rowIsNotAHeader(row string) bool {
+func (Bfile) rowIsNotAHeader(row string) bool {
 	var firstLetter rune = rune(row[0]) //first letter as a rune / kinda like a char.
 	isAHeader := unicode.IsLetter(firstLetter)
 	return !isAHeader
 }
 
 // /checks that a row isn't completely empty. if it is, return true, if not, false.
-func rowIsNotWhiteSpace(row string) bool {
+func (Bfile) rowIsNotWhiteSpace(row string) bool {
 	for i := 0; i < len(row); i++ {
 		charecter := row[i]
 		if !unicode.IsSpace(rune(charecter)) {
@@ -123,7 +127,7 @@ func rowIsNotWhiteSpace(row string) bool {
 
 // The b file is formated into columns 8 characters wide.
 // This function returns a row as a string array of "cells" 8 char wide.
-func splitRowsIntoCells(row string) ([]string, error) {
+func (Bfile) splitRowsIntoCells(row string) ([]string, error) {
 	var cellSize int = 8 // RAS B file format.
 	var lengthOfRow int = len(row)
 	var result []string
@@ -145,7 +149,7 @@ func splitRowsIntoCells(row string) ([]string, error) {
 	return result, nil
 }
 
-func convertFloatToBfileCellValue(fl float64) string {
+func (BreachData) convertFloatToBfileCellValue(fl float64) string {
 	// Round the float to 8 digits
 	rounded := math.Round(fl*1e8) / 1e8
 
@@ -160,14 +164,14 @@ func convertFloatToBfileCellValue(fl float64) string {
 	return result
 }
 
-func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) (int, error) {
+func (bf Bfile) numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) (int, error) {
 	rowCount := 3 // doesn't include any coordinate rows.
 	var ProgOrdNumIndex int
-	row2Exists, err := getRow2Exists(rows, firstRowIndex)
+	row2Exists, err := bf.getRow2Exists(rows, firstRowIndex)
 	if err != nil {
 		return 0, err
 	}
-	row7and8Exist, err := getRow7and8Exist(rows, firstRowIndex)
+	row7and8Exist, err := bf.getRow7and8Exist(rows, firstRowIndex)
 	if err != nil {
 		return 0, err
 	}
@@ -182,7 +186,7 @@ func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) (int, e
 
 	//additional rows from progression/owncutting
 	rowCount += 1 //for the count of coordinates
-	additionalRows, err := additionalRowsFromStoredOrdinates(rows, ProgOrdNumIndex)
+	additionalRows, err := bf.additionalRowsFromStoredOrdinates(rows, ProgOrdNumIndex)
 	if err != nil {
 		return 0, err
 	}
@@ -192,7 +196,7 @@ func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) (int, e
 	if row7and8Exist {
 		rowCount += 1 //for the count of coordinates
 		DowncuttingOrdNumIndex := firstRowIndex + rowCount
-		additionalRows, err = additionalRowsFromStoredOrdinates(rows, DowncuttingOrdNumIndex)
+		additionalRows, err = bf.additionalRowsFromStoredOrdinates(rows, DowncuttingOrdNumIndex)
 		if err != nil {
 			return 0, err
 		}
@@ -202,7 +206,7 @@ func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) (int, e
 	return rowCount, nil
 }
 
-func additionalRowsFromStoredOrdinates(rows [][]string, ProgOrdNumIndex int) (int, error) {
+func (Bfile) additionalRowsFromStoredOrdinates(rows [][]string, ProgOrdNumIndex int) (int, error) {
 	ProgOrdNum, err := getIntFromCellValue(rows[ProgOrdNumIndex][0])
 	if err != nil {
 		return 0, err
@@ -215,8 +219,8 @@ func additionalRowsFromStoredOrdinates(rows [][]string, ProgOrdNumIndex int) (in
 	return (partialRow + fullRow), err
 }
 
-func getStartingElevationRowIndex(rows [][]string, firstRowIndex int) (int, error) {
-	row2exists, err := getRow2Exists(rows, firstRowIndex)
+func (bf Bfile) getStartingElevationRowIndex(rows [][]string, firstRowIndex int) (int, error) {
+	row2exists, err := bf.getRow2Exists(rows, firstRowIndex)
 	if err != nil {
 		return 0, err
 	}
@@ -227,7 +231,7 @@ func getStartingElevationRowIndex(rows [][]string, firstRowIndex int) (int, erro
 }
 
 // row 2 only exists if we're using mass wasting, which as indicated by a 1 in column index 13. if not, it's a 0
-func getRow2Exists(rows [][]string, firstRowIndex int) (bool, error) {
+func (Bfile) getRow2Exists(rows [][]string, firstRowIndex int) (bool, error) {
 	columnIndexMassWasting := 13
 	cellValueMassWasting := rows[firstRowIndex][columnIndexMassWasting]
 	MassWastingIndex, err := getIntFromCellValue(cellValueMassWasting)
@@ -242,7 +246,7 @@ func getIntFromCellValue(cell string) (int, error) {
 	return strconv.Atoi(trimmedCell)
 }
 
-func getRow7and8Exist(rows [][]string, firstRowIndex int) (bool, error) {
+func (Bfile) getRow7and8Exist(rows [][]string, firstRowIndex int) (bool, error) {
 	columnIndexBreachMethod := 9
 	cellValueBreachMethod := rows[firstRowIndex][columnIndexBreachMethod]
 	breachMethodIndex, err := getIntFromCellValue(cellValueBreachMethod)
@@ -252,7 +256,7 @@ func getRow7and8Exist(rows [][]string, firstRowIndex int) (bool, error) {
 	return (breachMethodIndex == 1), nil
 }
 
-func BreakBreachDataOutForSeparateStructures(rows [][]string) ([]BreachData, error) {
+func (bf Bfile) rowToBreachData(rows [][]string) ([]BreachData, error) {
 	var breachdatas []BreachData
 
 	numBreachingStructures, err := getIntFromCellValue(rows[0][0])
@@ -265,11 +269,11 @@ func BreakBreachDataOutForSeparateStructures(rows [][]string) ([]BreachData, err
 	for i := 0; i < numBreachingStructures; i++ {
 
 		//create a BreachData Object
-		numRowsInStructureBreachData, err := numRowsForStructureInBreachData(rows, structureFirstRowIndex)
+		numRowsInStructureBreachData, err := bf.numRowsForStructureInBreachData(rows, structureFirstRowIndex)
 		if err != nil {
 			return nil, err
 		}
-		startingElevationRowIndex, err := getStartingElevationRowIndex(rows, structureFirstRowIndex)
+		startingElevationRowIndex, err := bf.getStartingElevationRowIndex(rows, structureFirstRowIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -284,3 +288,7 @@ func BreakBreachDataOutForSeparateStructures(rows [][]string) ([]BreachData, err
 	}
 	return breachdatas, nil
 }
+
+//TODO: Write ammended data back to b01
+
+//TODO: Get the SNET-ID from the Geometry HDF.
