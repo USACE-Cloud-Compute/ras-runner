@@ -18,12 +18,12 @@ func TestGetBreachRows(t *testing.T) {
 }
 
 func TestGetBreachData(t *testing.T) {
-	bf := InitBFile(oneBreachBFile)
+	bf := InitBFile(multiBreachBFile)
 	rows, err := bf.getBreachRows()
 	if err != nil || rows == nil {
 		t.Fail()
 	}
-	bd, err := bf.rowToBreachData(rows)
+	bd, err := bf.GetBreachData(rows)
 	if bd == nil || err != nil {
 		t.Fail()
 	}

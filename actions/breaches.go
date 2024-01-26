@@ -256,7 +256,7 @@ func (Bfile) getRow7and8Exist(rows [][]string, firstRowIndex int) (bool, error) 
 	return (breachMethodIndex == 1), nil
 }
 
-func (bf Bfile) rowToBreachData(rows [][]string) ([]BreachData, error) {
+func (bf Bfile) GetBreachData(rows [][]string) ([]BreachData, error) {
 	var breachdatas []BreachData
 
 	numBreachingStructures, err := getIntFromCellValue(rows[0][0])
@@ -287,6 +287,27 @@ func (bf Bfile) rowToBreachData(rows [][]string) ([]BreachData, error) {
 		structureFirstRowIndex = structureFirstRowIndex + numRowsInStructureBreachData
 	}
 	return breachdatas, nil
+}
+
+func AmmendBreachElevations(newFailureElevationsByIndex map[int]float64, structureBreachData []BreachData) error {
+	countNewFailureElevs := len(newFailureElevationsByIndex)
+	countStructuresBreaching := len(structureBreachData)
+	if countNewFailureElevs != countStructuresBreaching {
+		return errors.New("the number of new elevations, and available structures did not match")
+	}
+	for i := 0; i < countNewFailureElevs; i++ {
+		var structure *BreachData = &structureBreachData[i]
+		strucID, err := structure.getUnetID()
+		if err != nil {
+			return err
+		}
+		err = structure.updateFailureElevation(newFailureElevationsByIndex[strucID])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+
 }
 
 //TODO: Write ammended data back to b01
