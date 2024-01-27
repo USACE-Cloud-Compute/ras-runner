@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"strconv"
@@ -17,69 +16,77 @@ const breachDataHeader string = "Breach Data"
 
 // Parsing of these files is guided by the investigation here: https://www.hec.usace.army.mil/confluence/display/FFRD/Deciphering+Breach+Data+in+Intermediate+Files
 // nomenclature used in comments, as well as method and variable names is done to reflect the language on the above page.
-type BreachData struct {
-	FailureElevationRowNum int
-	BreachDataRows         [][]string
-}
-
-func InitBreachData(rowNumber int, breachDataRows [][]string) BreachData {
-	return BreachData{
-		FailureElevationRowNum: rowNumber,
-		BreachDataRows:         breachDataRows,
-	}
-}
-
-func (bd BreachData) updateFailureElevation(newFailureElevation float64) error {
-	bd.BreachDataRows[bd.FailureElevationRowNum][0] = bd.convertFloatToBfileCellValue(newFailureElevation)
-	return nil
-}
-
-func (bd BreachData) getUnetID() (int, error) {
-	cellValue := bd.BreachDataRows[0][0] //Always the first cell for a set of structure breach data.
-	id, err := getIntFromCellValue(cellValue)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
-}
 
 type Bfile struct {
-	Filename string
+	Filename            string
+	Rows                []string
+	StructureBreachData []BreachData
 }
 
-func InitBFile(bfilePath string) Bfile {
-	return Bfile{
+func InitBFile(bfilePath string) (Bfile, error) {
+	bf := Bfile{
 		Filename: bfilePath,
 	}
+
+	//sets Rows
+	err := bf.readBFile()
+	if err != nil {
+		return bf, err
+	}
+
+	//set Breach Data
+	breachRows, err := bf.getBreachRows(bf.Rows)
+	if err != nil {
+		return bf, err
+	}
+	err = bf.SetBreachData(breachRows)
+	if err != nil {
+		return bf, err
+	}
+
+	//done
+	return bf, nil
+
 }
 
-// get a slice of rows (which are slices of string cells) that represents all the breach data in the b-file
-func (bf Bfile) getBreachRows() ([][]string, error) {
-	var breachDataRows [][]string
+// read the file into memory as a slice of string, where each line/row is a string.
+func (bf Bfile) readBFile() error {
+	var lines []string
 
 	file, err := os.Open(bf.Filename)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	//close the file when we're done
 	defer file.Close()
 
 	//read the file line by line
 	scanner := bufio.NewScanner(file)
-
 	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), breachDataHeader) {
-			scanner.Scan() // next line
+		line := scanner.Text()
+		lines = append(lines, line)
+	}
+	bf.Rows = lines
+	return nil
+}
+
+// get a slice of rows (which are slices of string cells) that represents all the breach data in the b-file
+func (bf Bfile) getBreachRows(bfileRows []string) ([][]string, error) {
+	var breachDataRows [][]string
+
+	for i := 0; i < len(bfileRows); i++ {
+		if strings.Contains(bfileRows[i], breachDataHeader) {
+			i++ // next line
 			isBreachData := true
-			var rowText = scanner.Text()
+			var rowText = bfileRows[i]
 			for isBreachData { // until we hit another header or empty line, keep going
 				row, err := bf.splitRowsIntoCells(rowText)
 				if err != nil {
 					return breachDataRows, err
 				}
 				breachDataRows = append(breachDataRows, row)
-				scanner.Scan()
-				rowText = scanner.Text()
+				i++ //next line
+				rowText = bfileRows[i]
 				isBreachData = bf.rowIsBreachData(rowText)
 			}
 			if breachDataRows != nil {
@@ -87,11 +94,6 @@ func (bf Bfile) getBreachRows() ([][]string, error) {
 			}
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
-
 	return breachDataRows, nil
 }
 
@@ -256,7 +258,7 @@ func (Bfile) getRow7and8Exist(rows [][]string, firstRowIndex int) (bool, error) 
 	return (breachMethodIndex == 1), nil
 }
 
-func (bf Bfile) GetBreachData(rows [][]string) ([]BreachData, error) {
+func (bf Bfile) SetBreachData(rows [][]string) error {
 	var breachdatas []BreachData
 
 	numBreachingStructures, err := getIntFromCellValue(rows[0][0])
@@ -271,11 +273,11 @@ func (bf Bfile) GetBreachData(rows [][]string) ([]BreachData, error) {
 		//create a BreachData Object
 		numRowsInStructureBreachData, err := bf.numRowsForStructureInBreachData(rows, structureFirstRowIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		startingElevationRowIndex, err := bf.getStartingElevationRowIndex(rows, structureFirstRowIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		specificRows := rows[structureFirstRowIndex:(structureFirstRowIndex + numRowsInStructureBreachData)]
 		bd := InitBreachData(startingElevationRowIndex, specificRows)
@@ -286,7 +288,8 @@ func (bf Bfile) GetBreachData(rows [][]string) ([]BreachData, error) {
 		//update first row index for the next guy.
 		structureFirstRowIndex = structureFirstRowIndex + numRowsInStructureBreachData
 	}
-	return breachdatas, nil
+	bf.StructureBreachData = breachdatas
+	return nil
 }
 
 func AmmendBreachElevations(newFailureElevationsByIndex map[int]float64, structureBreachData []BreachData) error {
@@ -307,7 +310,26 @@ func AmmendBreachElevations(newFailureElevationsByIndex map[int]float64, structu
 		}
 	}
 	return nil
+}
 
+func (bf Bfile) Write() ([]byte, error) {
+	//for each row in th file
+	for i := 0; i < len(bf.Rows); i++ {
+		if strings.Contains(bf.Rows[i], breachDataHeader) {
+			i++ // next line (structure count)
+			i++ // first line with structure data
+			//for each structure we've got breach data for
+			for j := 0; j < len(bf.StructureBreachData); j++ {
+				strucRows := bf.StructureBreachData[j].getRowsAsString()
+				//for each row of data for that structure
+				for k := 0; k < len(strucRows); k++ {
+					bf.Rows[i] = strucRows[k]
+					i++
+				}
+			}
+		}
+	}
+	return []byte(strings.Join(bf.Rows, "")), nil
 }
 
 //TODO: Write ammended data back to b01

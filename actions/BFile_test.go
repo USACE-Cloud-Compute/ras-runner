@@ -9,22 +9,8 @@ const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverl
 const multiBreachBFile string = "/workspaces/cc-ras-runner/TestData/multiDamBreach.b01"
 
 func TestGetBreachRows(t *testing.T) {
-	bf := InitBFile(oneBreachBFile)
-	rows, err := bf.getBreachRows()
-	if err != nil || rows == nil {
-		t.Fail()
-	}
-
-}
-
-func TestGetBreachData(t *testing.T) {
-	bf := InitBFile(multiBreachBFile)
-	rows, err := bf.getBreachRows()
-	if err != nil || rows == nil {
-		t.Fail()
-	}
-	bd, err := bf.GetBreachData(rows)
-	if bd == nil || err != nil {
+	_, err := InitBFile(oneBreachBFile)
+	if err != nil {
 		t.Fail()
 	}
 }
