@@ -7,7 +7,6 @@ import (
 )
 
 const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverlapDem.b01"
-const multiBreachBFile string = "/workspaces/cc-ras-runner/TestData/multiDamBreach.b01"
 
 func TestWrite(t *testing.T) {
 	bf, err := InitBFile(oneBreachBFile) // hold the original for comparison (expected)
