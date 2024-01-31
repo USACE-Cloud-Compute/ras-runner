@@ -50,7 +50,7 @@ func InitBFile(bfilePath string) (*Bfile, error) {
 	if err != nil {
 		return &bf, err
 	}
-	err = bf.SetBreachData(breachRows)
+	err = bf.setBreachData(breachRows)
 	if err != nil {
 		return &bf, err
 	}
@@ -269,7 +269,8 @@ func (*Bfile) getRow7and8Exist(rows [][]string, firstRowIndex int) (bool, error)
 	return (breachMethodIndex == 1), nil
 }
 
-func (bf *Bfile) SetBreachData(rows [][]string) error {
+// SetBreachData sets the StructureBreachData property on the Bfile.
+func (bf *Bfile) setBreachData(rows [][]string) error {
 	var breachdatas []BreachData
 
 	numBreachingStructures, err := getIntFromCellValue(rows[0][0])
@@ -307,6 +308,7 @@ func (bf *Bfile) SetBreachData(rows [][]string) error {
 func (bf *Bfile) AmmendBreachElevations(structureName string, newFailureElevation float64) error {
 	for _, v := range bf.StructureBreachData {
 		strucID, err := v.getUnetID()
+
 		if err != nil {
 			return err
 		}
