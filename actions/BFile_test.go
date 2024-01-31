@@ -2,12 +2,16 @@ package actions
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"testing"
+
+	"github.com/usace/cc-go-sdk"
 )
 
 const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverlapDem.b01"
 const multiBreachBFile string = "/workspaces/cc-ras-runner/TestData/multiDamBreach.b01"
+const fakeFragCurvePath string = ""
 
 func TestWrite(t *testing.T) {
 	bf, err := InitBFile(oneBreachBFile) // hold the original for comparison (expected)
@@ -18,9 +22,7 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-	mapdata := make(map[int]float64, 1)
-	mapdata[2] = 999
-	err = bfAmmended.AmmendBreachElevations(mapdata)
+	err = bfAmmended.AmmendBreachElevations("2", 999)
 	if err != nil {
 		t.Fail()
 	}
@@ -48,7 +50,6 @@ func TestGetBreachRows(t *testing.T) {
 		t.Fail()
 	}
 }
-
 func TestRowsIntoCells(t *testing.T) {
 	var bf Bfile = Bfile{Filename: ""}
 	row, err := bf.splitRowsIntoCells("000000010000004500000005")
@@ -93,4 +94,20 @@ func TestEditFailureElevationData(t *testing.T) {
 		t.Fail()
 	}
 
+}
+func TestBfileAction(t *testing.T) {
+	parameters := make(map[string]any)
+	parameters["bfile"] = filepath.Base(oneBreachBFile)
+	parameters["fcFile"] = filepath.Base(fakeFragCurvePath)
+	modelDir := filepath.Dir(oneBreachBFile)
+	action := cc.Action{
+		Name:        "update-bfile",
+		Type:        "update-bfile",
+		Description: "update bfile",
+		Parameters:  parameters,
+	}
+	err := UpdateBfileAction(action, modelDir)
+	if err != nil {
+		t.Fail()
+	}
 }

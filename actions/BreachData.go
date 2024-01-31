@@ -1,6 +1,9 @@
 package actions
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 type BreachData struct {
 	FailureElevationRowNum int
@@ -19,13 +22,13 @@ func (bd BreachData) updateFailureElevation(newFailureElevation float64) error {
 	return nil
 }
 
-func (bd BreachData) getUnetID() (int, error) {
-	cellValue := bd.BreachDataRows[0][0] //Always the first cell for a set of structure breach data.
-	id, err := getIntFromCellValue(cellValue)
-	if err != nil {
-		return 0, err
+func (bd BreachData) getUnetID() (string, error) {
+	if bd.BreachDataRows == nil {
+		return "", errors.New("breach data rows were not set. make sure to initialize through InitBreachData()")
 	}
-	return id, nil
+	cellValue := bd.BreachDataRows[0][0] //Always the first cell for a set of structure breach data.
+	valueAsString := strings.TrimSpace(cellValue)
+	return valueAsString, nil
 }
 
 func (bd BreachData) getRowsAsString() []string {

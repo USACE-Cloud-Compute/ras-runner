@@ -2,13 +2,17 @@ package actions
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/usace/cc-go-sdk"
 )
 
 const rowLengthCellSizeError string = "the row was not able to be divided evenly by the cell size without remainder. Ensure the b-file has not been modified outside of RAS"
@@ -21,6 +25,13 @@ type Bfile struct {
 	Filename            string
 	Rows                []string
 	StructureBreachData []BreachData
+}
+type FragilityCurveLocationResult struct {
+	Name             string  `json:"location"`
+	FailureElevation float64 `json:"failure_elevation"`
+}
+type ModelResult struct {
+	Results []FragilityCurveLocationResult `json:"results"`
 }
 
 func InitBFile(bfilePath string) (*Bfile, error) {
@@ -292,23 +303,23 @@ func (bf *Bfile) SetBreachData(rows [][]string) error {
 	return nil
 }
 
-func (bf *Bfile) AmmendBreachElevations(newFailureElevationsByIndex map[int]float64) error {
-	countNewFailureElevs := len(newFailureElevationsByIndex)
-	countStructuresBreaching := len(bf.StructureBreachData)
-	if countNewFailureElevs != countStructuresBreaching {
-		return errors.New("the number of new elevations, and available structures did not match")
-	}
-	for i := 0; i < countNewFailureElevs; i++ {
-		strucID, err := bf.StructureBreachData[i].getUnetID()
+// AmmendBreachElevations finds the structure breach data which matches the structureName and updates it's elevation in the breach data rows.
+func (bf *Bfile) AmmendBreachElevations(structureName string, newFailureElevation float64) error {
+	for _, v := range bf.StructureBreachData {
+		strucID, err := v.getUnetID()
 		if err != nil {
 			return err
 		}
-		err = bf.StructureBreachData[i].updateFailureElevation(newFailureElevationsByIndex[strucID])
-		if err != nil {
-			return err
+		if strucID == structureName {
+			err = v.updateFailureElevation(newFailureElevation)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 	}
-	return nil
+	//if we made it through the loop without finding a structure, it's not there.
+	return fmt.Errorf("structure name, %v, did not exist in bFile", structureName)
 }
 
 // Write writes bFile to byte array
@@ -339,6 +350,41 @@ func (bf Bfile) Write() ([]byte, error) {
 		b = append(b, "\n"...)
 	}
 	return b, nil
+}
+
+// UpdateBfileAction reads a fragility curve output file and uses it to read and write a bfile with updated elevations.
+func UpdateBfileAction(action cc.Action, modelDir string) error {
+	// Assumes bFile and fragility curve file  were copied local with the CopyLocal action.
+	log.Printf("Ready to update bFile.")
+	bFileName := action.Parameters["bFile"].(map[string]any)["name"].(string)
+	bfilePath := fmt.Sprintf("%v/%v", modelDir, bFileName)
+	bf, err := InitBFile(bfilePath) //add file exists check.
+	if err != nil {
+		log.Fatalf("Input source %s, was not found in local directory. Run copy-local first. ", bfilePath)
+		return err
+	}
+	fcFileName := action.Parameters["fcFile"].(map[string]any)["name"].(string) //FC file is going to be local as well. don't read bytes.
+	fcFilePath := fmt.Sprintf("%v/%v", modelDir, fcFileName)
+	fcFileBytes, err := os.ReadFile(fcFilePath)
+	if err != nil {
+		log.Fatalf("Error getting input source %s", fcFileName)
+		return err
+	}
+	var fcResult ModelResult
+	err = json.Unmarshal(fcFileBytes, &fcResult)
+	if err != nil {
+		log.Fatalf("Error getting input source %s", fcFileName)
+		return err
+	}
+	for _, fclr := range fcResult.Results {
+		bf.AmmendBreachElevations(fclr.Name, fclr.FailureElevation) //change this to one by one
+	}
+	resultBytes, err := bf.Write()
+	if err != nil {
+		log.Fatalf("Error getting input source %s", fcFileName)
+		return err
+	}
+	return os.WriteFile(bfilePath, resultBytes, 0600)
 }
 
 //TODO: Get the SNET-ID from the Geometry HDF.
