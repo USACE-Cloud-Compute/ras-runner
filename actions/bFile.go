@@ -26,6 +26,7 @@ type Bfile struct {
 	Rows                []string
 	StructureBreachData []BreachData
 }
+
 type FragilityCurveLocationResult struct {
 	Name             string  `json:"location"`
 	FailureElevation float64 `json:"failure_elevation"`
