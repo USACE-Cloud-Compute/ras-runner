@@ -28,7 +28,7 @@ type Bfile struct {
 	Filename            string
 	Rows                []string
 	StructureBreachData []BreachData
-	SNETidToStructName  map[int]string // This should be initialized with a geometry hdf using InitSNETidToStructName("*.g**.hdf")
+	SNETidToStructName  map[string]int // This should be initialized with a geometry hdf using InitSNETidToStructName("*.g**.hdf")
 }
 
 type FragilityCurveLocationResult struct {
@@ -312,16 +312,16 @@ func (bf *Bfile) setBreachData(rows [][]string) error {
 // AmmendBreachElevations finds the structure breach data which matches the structureName and updates it's elevation in the breach data rows.
 func (bf *Bfile) AmmendBreachElevations(structureName string, newFailureElevation float64) error {
 	//searching for the right breach data with a loop seems inefficient. I could bring in the geom in the Init and build a dictionary
+	if bf.SNETidToStructName == nil {
+		return errors.New("use SetSNetIDToNameFromGeoHDF() to set SNETidToStructName property in BFile before ammending elevations")
+	}
+	targetSNetID := bf.SNETidToStructName[structureName]
 	for _, v := range bf.StructureBreachData {
 		strucID, err := v.getUnetID()
 		if err != nil {
 			return err
 		}
-		if bf.SNETidToStructName == nil {
-			return errors.New("")
-		}
-		breachDataName := bf.SNETidToStructName[strucID]
-		if breachDataName == structureName {
+		if strucID == targetSNetID {
 			err = v.updateFailureElevation(newFailureElevation)
 			if err != nil {
 				return err
@@ -431,9 +431,9 @@ func (bf *Bfile) SetSNetIDToNameFromGeoHDF(filePath string) error {
 	}
 
 	//the SNET ID is the index of the structure in the table at STRUCTURE_DATA_PATH +2
-	sNetIDDict := make(map[int]string, len(structureNames))
+	sNetIDDict := make(map[string]int, len(structureNames))
 	for index, name := range structureNames {
-		sNetIDDict[index+2] = name
+		sNetIDDict[name] = index + 2
 	}
 
 	bf.SNETidToStructName = sNetIDDict
