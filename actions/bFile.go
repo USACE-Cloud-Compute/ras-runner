@@ -28,6 +28,7 @@ type Bfile struct {
 	Filename            string
 	Rows                []string
 	StructureBreachData []BreachData
+	SNETidToStructName  map[int]string // This should be initialized with a geometry hdf using InitSNETidToStructName("*.g**.hdf")
 }
 
 type FragilityCurveLocationResult struct {
@@ -310,13 +311,17 @@ func (bf *Bfile) setBreachData(rows [][]string) error {
 
 // AmmendBreachElevations finds the structure breach data which matches the structureName and updates it's elevation in the breach data rows.
 func (bf *Bfile) AmmendBreachElevations(structureName string, newFailureElevation float64) error {
+	//searching for the right breach data with a loop seems inefficient. I could bring in the geom in the Init and build a dictionary
 	for _, v := range bf.StructureBreachData {
 		strucID, err := v.getUnetID()
-
 		if err != nil {
 			return err
 		}
-		if strucID == structureName {
+		if bf.SNETidToStructName == nil {
+			return errors.New("")
+		}
+		breachDataName := bf.SNETidToStructName[strucID]
+		if breachDataName == structureName {
 			err = v.updateFailureElevation(newFailureElevation)
 			if err != nil {
 				return err
@@ -367,7 +372,7 @@ func fileExists(filePath string) bool {
 func UpdateBfileAction(action cc.Action, modelDir string) error {
 	// Assumes bFile and fragility curve file  were copied local with the CopyLocal action.
 	log.Printf("Ready to update bFile.")
-	bFileName := action.Parameters["bFile"].(map[string]any)["name"].(string)
+	bFileName := action.Parameters["bFile"].(string) //these may eventually need to be map[string]any instead of strings. Look at Kanawah-runner manifests as examples.
 	bfilePath := fmt.Sprintf("%v/%v", modelDir, bFileName)
 	if !fileExists(bfilePath) {
 		log.Fatalf("Input source %s, was not found in local directory. Run copy-local first", bfilePath)
@@ -376,7 +381,7 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fcFileName := action.Parameters["fcFile"].(map[string]any)["name"].(string)
+	fcFileName := action.Parameters["fcFile"].(string)
 	fcFilePath := fmt.Sprintf("%v/%v", modelDir, fcFileName)
 	fcFileBytes, err := os.ReadFile(fcFilePath)
 	if err != nil {
@@ -400,8 +405,8 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 	return os.WriteFile(bfilePath, resultBytes, 0600)
 }
 
-// TODO: Get the SNET-ID from the Geometry HDF.
-func GetSNetIDFromGeoHDF(filename string) (map[string]int, error) {
+// Create a dictionary of SNET-ID to structure name from the Geometry HDF.
+func (bf *Bfile) SetSNetIDToNameFromGeoHDF(filePath string) error {
 	//need to get a handle on the table located at STRUCTURE_DATA_PATH
 	hdfReadOptions := hdf5utils.HdfReadOptions{
 		Dtype:              0,
@@ -410,7 +415,7 @@ func GetSNetIDFromGeoHDF(filename string) (map[string]int, error) {
 		IncrementalReadDir: 0,
 		IncrementSize:      0,
 		ReadOnCreate:       false,
-		Filepath:           "",
+		Filepath:           filePath,
 		File:               &hdf5.File{},
 	}
 	file, err := hdf5utils.NewHdfDataset(STRUCTURE_DATA_PATH, hdfReadOptions)
@@ -426,9 +431,11 @@ func GetSNetIDFromGeoHDF(filename string) (map[string]int, error) {
 	}
 
 	//the SNET ID is the index of the structure in the table at STRUCTURE_DATA_PATH +2
-	sNetIDDict := make(map[string]int, len(structureNames))
+	sNetIDDict := make(map[int]string, len(structureNames))
 	for index, name := range structureNames {
-		sNetIDDict[name] = index + 2
+		sNetIDDict[index+2] = name
 	}
-	return sNetIDDict, nil
+
+	bf.SNETidToStructName = sNetIDDict
+	return nil
 }

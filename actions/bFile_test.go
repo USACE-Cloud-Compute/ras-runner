@@ -97,7 +97,7 @@ func TestEditFailureElevationData(t *testing.T) {
 }
 func TestBfileAction(t *testing.T) {
 	parameters := make(map[string]any)
-	parameters["bfile"] = filepath.Base(ONE_BREACH_FILE)
+	parameters["bFile"] = filepath.Base(ONE_BREACH_FILE) //these may eventually need to be map[string]any instead of strings. Look at Kanawah-runner manifests as examples.
 	parameters["fcFile"] = filepath.Base(FRAG_CURVE_PATH)
 	modelDir := filepath.Dir(ONE_BREACH_FILE)
 	action := cc.Action{

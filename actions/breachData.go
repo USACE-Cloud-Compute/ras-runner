@@ -22,13 +22,16 @@ func (bd BreachData) updateFailureElevation(newFailureElevation float64) error {
 	return nil
 }
 
-func (bd BreachData) getUnetID() (string, error) {
+func (bd BreachData) getUnetID() (int, error) {
 	if bd.BreachDataRows == nil {
-		return "", errors.New("breach data rows were not set. make sure to initialize through InitBreachData()")
+		return 0, errors.New("breach data rows were not set. make sure to initialize through InitBreachData()")
 	}
 	cellValue := bd.BreachDataRows[0][0] //Always the first cell for a set of structure breach data.
-	valueAsString := strings.TrimSpace(cellValue)
-	return valueAsString, nil
+	sNetID, err := getIntFromCellValue(cellValue)
+	if err != nil {
+		return 0, err
+	}
+	return sNetID, nil
 }
 
 func (bd BreachData) getRowsAsString() []string {
