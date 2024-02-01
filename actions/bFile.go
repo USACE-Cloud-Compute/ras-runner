@@ -13,10 +13,13 @@ import (
 	"unicode"
 
 	"github.com/usace/cc-go-sdk"
+	"github.com/usace/go-hdf5"
+	"github.com/usace/hdf5utils"
 )
 
-const rowLengthCellSizeError string = "the row was not able to be divided evenly by the cell size without remainder. Ensure the b-file has not been modified outside of RAS"
-const breachDataHeader string = "Breach Data"
+const CELL_SIZE_ERROR string = "the row was not able to be divided evenly by the cell size without remainder. Ensure the b-file has not been modified outside of RAS"
+const BREACH_DATA_HEADER string = "Breach Data"
+const STRUCTURE_DATA_PATH string = "Geometry/Structures/Attributes/"
 
 // Parsing of these files is guided by the investigation here: https://www.hec.usace.army.mil/confluence/display/FFRD/Deciphering+Breach+Data+in+Intermediate+Files
 // nomenclature used in comments, as well as method and variable names is done to reflect the language on the above page.
@@ -87,7 +90,7 @@ func (bf *Bfile) getBreachRows(bfileRows []string) ([][]string, error) {
 	var breachDataRows [][]string
 
 	for i := 0; i < len(bfileRows); i++ {
-		if strings.Contains(bfileRows[i], breachDataHeader) {
+		if strings.Contains(bfileRows[i], BREACH_DATA_HEADER) {
 			i++ // next line
 			isBreachData := true
 			var rowText = bfileRows[i]
@@ -148,7 +151,7 @@ func (*Bfile) splitRowsIntoCells(row string) ([]string, error) {
 
 	//does the row divide evenly into complete cells?
 	if lengthOfRow%cellSize != 0 {
-		return nil, errors.New(rowLengthCellSizeError)
+		return nil, errors.New(CELL_SIZE_ERROR)
 	}
 
 	//divide the row into cells, add those cells to the array
@@ -330,7 +333,7 @@ func (bf Bfile) Write() ([]byte, error) {
 	//for each row in th file
 	b := make([]byte, 0)
 	for i := 0; i < len(bf.Rows); i++ {
-		if strings.Contains(bf.Rows[i], breachDataHeader) {
+		if strings.Contains(bf.Rows[i], BREACH_DATA_HEADER) {
 			b = append(b, bf.Rows[i]...)
 			b = append(b, "\n"...)
 			i++ // next line (structure count)
@@ -355,22 +358,29 @@ func (bf Bfile) Write() ([]byte, error) {
 	return b, nil
 }
 
+func fileExists(filePath string) bool {
+	_, error := os.Stat(filePath)
+	return !errors.Is(error, os.ErrNotExist)
+}
+
 // UpdateBfileAction reads a fragility curve output file and uses it to read and write a bfile with updated elevations.
 func UpdateBfileAction(action cc.Action, modelDir string) error {
 	// Assumes bFile and fragility curve file  were copied local with the CopyLocal action.
 	log.Printf("Ready to update bFile.")
 	bFileName := action.Parameters["bFile"].(map[string]any)["name"].(string)
 	bfilePath := fmt.Sprintf("%v/%v", modelDir, bFileName)
-	bf, err := InitBFile(bfilePath) //add file exists check.
-	if err != nil {
-		log.Fatalf("Input source %s, was not found in local directory. Run copy-local first. ", bfilePath)
-		return err
+	if !fileExists(bfilePath) {
+		log.Fatalf("Input source %s, was not found in local directory. Run copy-local first", bfilePath)
 	}
-	fcFileName := action.Parameters["fcFile"].(map[string]any)["name"].(string) //FC file is going to be local as well. don't read bytes.
+	bf, err := InitBFile(bfilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fcFileName := action.Parameters["fcFile"].(map[string]any)["name"].(string)
 	fcFilePath := fmt.Sprintf("%v/%v", modelDir, fcFileName)
 	fcFileBytes, err := os.ReadFile(fcFilePath)
 	if err != nil {
-		log.Fatalf("Error getting input source %s", fcFileName)
+		log.Fatalf("Error getting input source %s", fcFileName) //why don't we use err?
 		return err
 	}
 	var fcResult ModelResult
@@ -380,7 +390,7 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 		return err
 	}
 	for _, fclr := range fcResult.Results {
-		bf.AmmendBreachElevations(fclr.Name, fclr.FailureElevation) //change this to one by one
+		bf.AmmendBreachElevations(fclr.Name, fclr.FailureElevation)
 	}
 	resultBytes, err := bf.Write()
 	if err != nil {
@@ -390,4 +400,35 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 	return os.WriteFile(bfilePath, resultBytes, 0600)
 }
 
-//TODO: Get the SNET-ID from the Geometry HDF.
+// TODO: Get the SNET-ID from the Geometry HDF.
+func GetSNetIDFromGeoHDF(filename string) (map[string]int, error) {
+	//need to get a handle on the table located at STRUCTURE_DATA_PATH
+	hdfReadOptions := hdf5utils.HdfReadOptions{
+		Dtype:              0,
+		Strsizes:           hdf5utils.HdfStrSet{},
+		IncrementalRead:    false,
+		IncrementalReadDir: 0,
+		IncrementSize:      0,
+		ReadOnCreate:       false,
+		Filepath:           "",
+		File:               &hdf5.File{},
+	}
+	file, err := hdf5utils.NewHdfDataset(STRUCTURE_DATA_PATH, hdfReadOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//Read the column. Should get some slice of structure names from "Connection" at column index 5
+	var structureNames []string
+	err = file.ReadColumn(5, structureNames) //this probably assigns the data to param 2?
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//the SNET ID is the index of the structure in the table at STRUCTURE_DATA_PATH +2
+	sNetIDDict := make(map[string]int, len(structureNames))
+	for index, name := range structureNames {
+		sNetIDDict[name] = index + 2
+	}
+	return sNetIDDict, nil
+}
