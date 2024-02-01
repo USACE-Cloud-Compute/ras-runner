@@ -22,6 +22,8 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
+	bfAmmended.SNETidToStructName = make(map[string]int) //ideally I'd create this map from  a geometry HDF associated with this geom.
+	bfAmmended.SNETidToStructName["2"] = 2
 	err = bfAmmended.AmmendBreachElevations("2", 999)
 	if err != nil {
 		t.Fail()
