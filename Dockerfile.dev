@@ -49,11 +49,14 @@ RUN wget ${HDF_NEXUS_URL} &&\
     ./configure --prefix=/hdf --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
     make &&\
     make install
-    
-#finish and build.
+
+#download test data. I'd like to move this to the test data folder, but couldn't get the commmand working. 
+ARG NEXUS_TEST_DATA="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/BaldEagleDamBrk.g03.hdf"
+RUN wget ${NEXUS_TEST_DATA}
+
+#finish but no build. Build was failing and it was difficult to troubleshoot because I couldn't run in container. 
 RUN cd /src/ras-runner &&\
-    go mod tidy &&\
-    go build
+    go mod tidy 
 
 
 
