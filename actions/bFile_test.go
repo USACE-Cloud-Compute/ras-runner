@@ -12,6 +12,7 @@ import (
 const ONE_BREACH_FILE string = "/workspaces/cc-ras-runner/testData/DamBreachOverlapDem.b01"
 const MULTI_BREACH_FILE string = "/workspaces/cc-ras-runner/testData/multiDamBreach.b01"
 const FRAG_CURVE_PATH string = "/workspaces/cc-ras-runner/testData/testFragilityCurveOutput.json"
+const BALD_EAGLE_HDF_PATH string = "BaldEagleDamBrk.g03.hdf"
 
 func TestWrite(t *testing.T) {
 	bf, err := InitBFile(ONE_BREACH_FILE) // hold the original for comparison (expected)
@@ -64,7 +65,6 @@ func TestRowsIntoCells(t *testing.T) {
 		}
 	}
 }
-
 func TestConvertFloatToBcellValue(t *testing.T) {
 	var bd BreachData = BreachData{}
 	cellValue := bd.convertFloatToBfileCellValue(450.456)
@@ -73,7 +73,6 @@ func TestConvertFloatToBcellValue(t *testing.T) {
 		t.Fail()
 	}
 }
-
 func TestEditFailureElevationData(t *testing.T) {
 	newFailElev := 432.1
 	//set up some fake breach data
@@ -112,4 +111,18 @@ func TestBfileAction(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
+}
+func TestHDFread(t *testing.T) {
+	bfile, err := InitBFile(ONE_BREACH_FILE)
+	if err != nil {
+		t.Fail()
+	}
+	err = bfile.SetSNetIDToNameFromGeoHDF(BALD_EAGLE_HDF_PATH)
+	if err != nil {
+		t.Fail()
+	}
+	if len(bfile.SNETidToStructName) < 10 {
+		t.Fail()
+	}
+	fmt.Print(bfile.SNETidToStructName)
 }
