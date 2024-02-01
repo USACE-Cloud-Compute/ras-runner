@@ -9,16 +9,16 @@ import (
 	"github.com/usace/cc-go-sdk"
 )
 
-const oneBreachBFile string = "/workspaces/cc-ras-runner/TestData/DamBreachOverlapDem.b01"
-const multiBreachBFile string = "/workspaces/cc-ras-runner/TestData/multiDamBreach.b01"
-const fakeFragCurvePath string = ""
+const ONE_BREACH_FILE string = "/workspaces/cc-ras-runner/TestData/DamBreachOverlapDem.b01"
+const MULTI_BREACH_FILE string = "/workspaces/cc-ras-runner/TestData/multiDamBreach.b01"
+const FRAG_CURVE_PATH string = "/workspaces/cc-ras-runner/TestData/testFragilityCurveOutput.json"
 
 func TestWrite(t *testing.T) {
-	bf, err := InitBFile(oneBreachBFile) // hold the original for comparison (expected)
+	bf, err := InitBFile(ONE_BREACH_FILE) // hold the original for comparison (expected)
 	if err != nil {
 		t.Fail()
 	}
-	bfAmmended, err := InitBFile(oneBreachBFile) //ammend this one (actual)
+	bfAmmended, err := InitBFile(ONE_BREACH_FILE) //ammend this one (actual)
 	if err != nil {
 		t.Fail()
 	}
@@ -45,7 +45,7 @@ func TestWrite(t *testing.T) {
 	fmt.Println(stringb)
 }
 func TestGetBreachRows(t *testing.T) {
-	_, err := InitBFile(oneBreachBFile)
+	_, err := InitBFile(ONE_BREACH_FILE)
 	if err != nil {
 		t.Fail()
 	}
@@ -97,9 +97,9 @@ func TestEditFailureElevationData(t *testing.T) {
 }
 func TestBfileAction(t *testing.T) {
 	parameters := make(map[string]any)
-	parameters["bfile"] = filepath.Base(oneBreachBFile)
-	parameters["fcFile"] = filepath.Base(fakeFragCurvePath)
-	modelDir := filepath.Dir(oneBreachBFile)
+	parameters["bfile"] = filepath.Base(ONE_BREACH_FILE)
+	parameters["fcFile"] = filepath.Base(FRAG_CURVE_PATH)
+	modelDir := filepath.Dir(ONE_BREACH_FILE)
 	action := cc.Action{
 		Name:        "update-bfile",
 		Type:        "update-bfile",
