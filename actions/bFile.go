@@ -408,6 +408,9 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 // Create a dictionary of SNET-ID to structure name from the Geometry HDF.
 func (bf *Bfile) SetSNetIDToNameFromGeoHDF(filePath string) error {
 	//need to get a handle on the table located at STRUCTURE_DATA_PATH
+	if !fileExists(filePath) {
+		return errors.New("file doesn't exist")
+	}
 	hdfReadOptions := hdf5utils.HdfReadOptions{
 		Dtype:              0,
 		Strsizes:           hdf5utils.HdfStrSet{},
