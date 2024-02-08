@@ -22,7 +22,7 @@ func InitOutletTS(rows []string) (*OutletTS, error) {
 	output := OutletTS{Name: name}
 	rowCount, err := strconv.Atoi(strings.TrimLeft(rows[1], " "))
 	if err != nil {
-		return output, err
+		return &output, err
 	}
 	output.RowCount = rowCount
 	flowdata := make([]FlowData, rowCount)
@@ -30,7 +30,7 @@ func InitOutletTS(rows []string) (*OutletTS, error) {
 		if idx != 0 && idx != 1 {
 			tmpFlowData, err := parseRowString(rowstring)
 			if err != nil {
-				return output, err
+				return &output, err
 			}
 			for _, fd := range tmpFlowData {
 				flowdata[fd.Index] = fd
@@ -38,7 +38,7 @@ func InitOutletTS(rows []string) (*OutletTS, error) {
 		}
 	}
 	output.TimeSeries = flowdata
-	return output, nil
+	return &output, nil
 }
 func parseRowString(rowString string) ([]FlowData, error) {
 	valueLength := 8
@@ -73,8 +73,9 @@ func (ots *OutletTS) UpdateFlows(flows []float64) error {
 		return errors.New("Flow data was not the same length as the target in the b file")
 	}
 	for idx := range ots.TimeSeries {
-		ots.TimeSeries[i] = FlowData{idx, flows[idx]}
+		ots.TimeSeries[idx] = FlowData{idx, flows[idx]}
 	}
+	return nil
 }
 func (ots *OutletTS) ToBytes() []byte {
 	result := make([]byte, 0)
