@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"ras-runner/actions"
 	"reflect"
 	"strconv"
 	"strings"
@@ -45,6 +46,12 @@ func main() {
 	for _, action := range pm.GetPayload().Actions {
 		fmt.Println(action.Name)
 		switch action.Type {
+		case "update-breach-bfile":
+			// Assumes bFile and fragility curve file  were copied local with the CopyLocal action.
+			err := actions.UpdateBfileAction(action, MODEL_DIR)
+			if err != nil {
+				log.Fatal(err)
+			}
 		case "create-ras-tmp":
 			log.Printf("Ready to create temp for %s\n", action.Name)
 			srcname := action.Parameters["src"].(map[string]any)["name"].(string)

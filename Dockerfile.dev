@@ -1,8 +1,5 @@
 FROM rockylinux:8
 
-ARG RAS_FILE=RAS_v610_Linux_test.zip
-ARG RAS_UNZIP_DIR=RAS_v610_Linux_test/Ras_v61/Release
-ARG RAS_LIB_DIR=RAS_v610_Linux_test/libs
 
 RUN yum -y update &&\ 
     yum -y install git &&\
@@ -15,34 +12,51 @@ RUN yum -y update &&\
     yum -y install openssl-devel.x86_64 &&\
     mkdir -p /src/ras-runner &&\
     mkdir  /ras
-    
 
-COPY ${RAS_FILE} /
-COPY hdf5-1.14.1-2.tar.gz /
-COPY go.mod main.go /src/ras-runner
+#names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus. 
+ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/HEC-RAS_610_Linux_EngineOnly.zip
+ARG RAS_FILE=HEC-RAS_610_Linux_EngineOnly.zip
+ARG RAS_BIN_DIR=HEC-RAS_610_Linux_EngineOnly/bin
+ARG RAS_LIB_DIR=HEC-RAS_610_Linux_EngineOnly/libs
+#download RAS and put the file in the right place. Give them permissions to execute
+RUN wget ${NEXUS_RAS_URL} &&\ 
+    unzip ${RAS_FILE} &&\
+    mv /${RAS_BIN_DIR} /ras/libs &&\
+    mv /${RAS_LIB_DIR} /ras/bin &&\
+    chmod -R +x /ras/* 
 
+
+COPY go.mod main.go /src/ras-runner/
+
+#set up Go
+RUN wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz -P / &&\
+    tar -xvzf go1.21.5.linux-amd64.tar.gz -C / 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
 ENV PATH=/go/bin:$PATH
+
+#set up HDF
+ARG HDF_FILE=hdf5-1.14.3.tar.gz
+ARG HDF_NEXUS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/hdf/hdf5-1.14.3.tar.gz
 ENV CGO_LDFLAGS="-L/hdf/lib"
 ENV CGO_CFLAGS="-I/hdf/include"
 ENV LD_LIBRARY_PATH=/hdf/lib
 
-RUN unzip ${RAS_FILE} &&\
-    mv /${RAS_LIB_DIR} /ras/libs &&\
-    mv /${RAS_UNZIP_DIR} /ras/bin &&\
-    chmod -R +x /ras/* &&\
-    wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
-    tar -xvzf /go1.18.1.linux-amd64.tar.gz -C / &&\
+RUN wget ${HDF_NEXUS_URL} &&\
     mkdir /hdfsrc &&\
-    tar -xvzf hdf5-1.14.1-2.tar.gz --directory /hdfsrc --strip 2 &&\ 
+    tar -xvzf ${HDF_FILE} --directory /hdfsrc --strip 2 &&\ 
     cd /hdfsrc &&\
     ./configure --prefix=/hdf --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
     make &&\
-    make install &&\
-    cd /src/ras-runner &&\
-    go mod tidy &&\
-    go build
+    make install
+
+#download test data. I'd like to move this to the test data folder, but couldn't get the commmand working. 
+ARG NEXUS_TEST_DATA="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/BaldEagleDamBrk.g03.hdf"
+RUN wget ${NEXUS_TEST_DATA}
+
+#finish but no build. Build was failing and it was difficult to troubleshoot because I couldn't run in container. 
+RUN cd /src/ras-runner &&\
+    go mod tidy 
 
 
 
