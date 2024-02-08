@@ -2,6 +2,7 @@ package actions
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -66,4 +67,21 @@ func parseRowString(rowString string) ([]FlowData, error) {
 		}
 	}
 	return result, nil
+}
+
+func (ots OutletTS) ToBytes() []byte {
+	result := make([]byte, 0)
+	result = append(result, fmt.Sprintf("%v%v\n", TS_OUTFLOW_HEADER, ots.Name)...)
+	result = append(result, fmt.Sprintf("%*d\n", 8, ots.RowCount)...)
+	//write out 5 pairs then newline
+	for idx, fd := range ots.TimeSeries {
+		if idx != 0 {
+			if idx%5 == 0 {
+				result = append(result, "\n"...) //zero based will return on the 6th element (after the 5th) before writing the 6th
+			}
+		}
+		result = append(result, fmt.Sprintf("%*d%*f", 8, fd.Index, 8, fd.Flow)...) //this wont be exactly the same. it will right pad with zeros up to 8, mixed precision is hard.
+	}
+	result = append(result, "\n"...)
+	return result
 }
