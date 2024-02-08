@@ -20,6 +20,7 @@ import (
 const CELL_SIZE_ERROR string = "the row was not able to be divided evenly by the cell size without remainder. Ensure the b-file has not been modified outside of RAS"
 const BREACH_DATA_HEADER string = "Breach Data"
 const STRUCTURE_DATA_PATH string = "Geometry/Structures/Attributes/"
+const TS_OUTFLOW_HEADER string = "Outlet TS - "
 
 // Parsing of these files is guided by the investigation here: https://www.hec.usace.army.mil/confluence/display/FFRD/Deciphering+Breach+Data+in+Intermediate+Files
 // nomenclature used in comments, as well as method and variable names is done to reflect the language on the above page.
