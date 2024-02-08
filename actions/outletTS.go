@@ -26,7 +26,7 @@ func InitOutletTS(rows []string) (OutletTS, error) {
 	output.RowCount = rowCount
 	flowdata := make([]FlowData, rowCount)
 	for idx, rowstring := range rows {
-		if idx != 0 || idx != 1 {
+		if idx != 0 && idx != 1 {
 			tmpFlowData, err := parseRowString(rowstring)
 			if err != nil {
 				return output, err
