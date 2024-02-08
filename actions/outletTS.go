@@ -17,7 +17,7 @@ type FlowData struct {
 	Flow  float64
 }
 
-func InitOutletTS(rows []string) (OutletTS, error) {
+func InitOutletTS(rows []string) (*OutletTS, error) {
 	name := rows[0][len(TS_OUTFLOW_HEADER):len(rows[0])]
 	output := OutletTS{Name: name}
 	rowCount, err := strconv.Atoi(strings.TrimLeft(rows[1], " "))
@@ -68,8 +68,15 @@ func parseRowString(rowString string) ([]FlowData, error) {
 	}
 	return result, nil
 }
-
-func (ots OutletTS) ToBytes() []byte {
+func (ots *OutletTS) UpdateFlows(flows []float64) error {
+	if len(ots.TimeSeries) != len(flows) {
+		return errors.New("Flow data was not the same length as the target in the b file")
+	}
+	for idx := range ots.TimeSeries {
+		ots.TimeSeries[i] = FlowData{idx, flows[idx]}
+	}
+}
+func (ots *OutletTS) ToBytes() []byte {
 	result := make([]byte, 0)
 	result = append(result, fmt.Sprintf("%v%v\n", TS_OUTFLOW_HEADER, ots.Name)...)
 	result = append(result, fmt.Sprintf("%*d\n", 8, ots.RowCount)...)
