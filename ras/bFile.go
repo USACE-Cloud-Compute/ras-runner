@@ -27,9 +27,27 @@ type Bfile struct {
 	Filename            string
 	Rows                []string
 	StructureBreachData []BreachData
-	SNETidToStructName  map[string]int // This should be initialized with a geometry hdf using InitSNETidToStructName("*.g**.hdf")
-}
 
+	SNETidToStructName map[string]int // This should be initialized with a geometry hdf using InitSNETidToStructName("*.g**.hdf")
+} /*
+type BfileBlock interface{
+	Parse(rownum *int, scanner *bufio.Scanner) error
+	UpdateScalar(value float64) error
+	UpdateArray(values []float64) error
+	ToBytes() ([]byte, error)
+}
+type DefaultBlock struct{
+	index int
+	Rows []string
+}
+func (db DefaultBlock) Parse(rownum *int, scanner *bufio.Scanner) error{
+	startRow := rownum
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+	}
+}*/
 func InitBFile(bfilePath string) (*Bfile, error) {
 	bf := Bfile{
 		Filename: bfilePath,
