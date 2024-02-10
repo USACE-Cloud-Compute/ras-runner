@@ -51,8 +51,7 @@ func TestGetBreachRows(t *testing.T) {
 	}
 }
 func TestRowsIntoCells(t *testing.T) {
-	var bf Bfile = Bfile{Filename: ""}
-	row, err := bf.splitRowsIntoCells("000000010000004500000005")
+	row, err := splitRowsIntoCells("000000010000004500000005")
 	expected := []string{"00000001", "00000045", "00000005"}
 	if err == nil {
 		for i := 0; i < len(row); i++ {
@@ -63,8 +62,7 @@ func TestRowsIntoCells(t *testing.T) {
 	}
 }
 func TestConvertFloatToBcellValue(t *testing.T) {
-	var bd BreachData = BreachData{}
-	cellValue := bd.convertFloatToBfileCellValue(450.456)
+	cellValue := convertFloatToBfileCellValue(450.456)
 	expected := "450.4560"
 	if cellValue != expected {
 		t.Fail()
@@ -75,7 +73,7 @@ func TestEditFailureElevationData(t *testing.T) {
 	//set up some fake breach data
 	row := make([]string, 1)
 	var bd BreachData = BreachData{}
-	row[0] = bd.convertFloatToBfileCellValue(123.4)
+	row[0] = convertFloatToBfileCellValue(123.4)
 	rows := [][]string{}
 	rows = append(rows, row)
 	rows = append(rows, row)
@@ -83,7 +81,7 @@ func TestEditFailureElevationData(t *testing.T) {
 		FailureElevationRowNum: 1,
 		BreachDataRows:         rows,
 	}
-	bd.updateFailureElevation(newFailElev)
+	bd.UpdateFloat(newFailElev)
 	actualFailElev, err := strconv.ParseFloat(bd.BreachDataRows[bd.FailureElevationRowNum][0], 64)
 	if err != nil {
 		t.Fail()

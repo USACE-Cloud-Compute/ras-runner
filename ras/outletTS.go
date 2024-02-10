@@ -68,16 +68,19 @@ func parseRowString(rowString string) ([]FlowData, error) {
 	}
 	return result, nil
 }
-func (ots *OutletTS) UpdateFlows(flows []float64) error {
-	if len(ots.TimeSeries) != len(flows) {
+func (ots *OutletTS) UpdateFloat(value float64) error {
+	return errors.New("cannot update float on outlet timeseries")
+}
+func (ots *OutletTS) UpdateFloatArray(values []float64) error {
+	if len(ots.TimeSeries) != len(values) {
 		return errors.New("Flow data was not the same length as the target in the b file")
 	}
 	for idx := range ots.TimeSeries {
-		ots.TimeSeries[idx] = FlowData{idx, flows[idx]}
+		ots.TimeSeries[idx] = FlowData{idx, values[idx]}
 	}
 	return nil
 }
-func (ots *OutletTS) ToBytes() []byte {
+func (ots *OutletTS) ToBytes() ([]byte, error) {
 	result := make([]byte, 0)
 	result = append(result, fmt.Sprintf("%v%v\n", TS_OUTFLOW_HEADER, ots.Name)...)
 	result = append(result, fmt.Sprintf("%*d\n", 8, ots.RowCount)...)
@@ -91,5 +94,5 @@ func (ots *OutletTS) ToBytes() []byte {
 		result = append(result, fmt.Sprintf("%*d%*f", 8, fd.Index, 8, fd.Flow)...) //this wont be exactly the same. it will right pad with zeros up to 8, mixed precision is hard.
 	}
 	result = append(result, "\n"...)
-	return result
+	return result, nil
 }
