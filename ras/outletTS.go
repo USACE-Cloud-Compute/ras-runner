@@ -91,7 +91,7 @@ func (ots *OutletTS) ToBytes() ([]byte, error) {
 				result = append(result, "\n"...) //zero based will return on the 6th element (after the 5th) before writing the 6th
 			}
 		}
-		result = append(result, fmt.Sprintf("%*d%*f", 8, fd.Index, 8, fd.Flow)...) //this wont be exactly the same. it will right pad with zeros up to 8, mixed precision is hard.
+		result = append(result, convertFloatToBfileCellValue(fd.Flow)...) //
 	}
 	result = append(result, "\n"...)
 	return result, nil
