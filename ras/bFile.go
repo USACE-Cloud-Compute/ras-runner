@@ -48,7 +48,7 @@ func (db *DefaultBlock) UpdateFloatArray(values []float64) error {
 func (db *DefaultBlock) ToBytes() ([]byte, error) {
 	bytedata := make([]byte, 0)
 	for _, row := range db.Rows {
-		bytedata = append(bytedata, row...)
+		bytedata = append(bytedata, fmt.Sprintf("%s\n", row)...)
 	}
 	return bytedata, nil
 }
@@ -81,13 +81,18 @@ func (bf *Bfile) readBFile() error {
 	blockRows := make([]string, 0)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if rowIsNotAHeader(line) {
-			blockRows = append(blockRows, line)
+		if len(blockRows) == 0 {
+			blockRows = append(blockRows, line) //must be the first header
 		} else {
-			blocks = append(blocks, blockRows)
-			//new block
-			blockRows := make([]string, 0)
-			blockRows = append(blockRows, line)
+			if rowIsNotAHeader(line) {
+				blockRows = append(blockRows, line) //must not be a header
+			} else {
+				blocks = append(blocks, blockRows)
+				//new block
+				blockRows = make([]string, 0)
+				blockRows = append(blockRows, line) //must add the line not to loose it
+			}
+
 		}
 	}
 	bFileBlocks := make([]BfileBlock, 0)

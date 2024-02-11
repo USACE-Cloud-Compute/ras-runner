@@ -32,8 +32,8 @@ func InitOutletTS(rows []string) (*OutletTS, error) {
 			if err != nil {
 				return &output, err
 			}
-			for _, fd := range tmpFlowData {
-				flowdata[fd.Index] = fd
+			for idx, fd := range tmpFlowData {
+				flowdata[idx] = fd
 			}
 		}
 	}
@@ -75,8 +75,8 @@ func (ots *OutletTS) UpdateFloatArray(values []float64) error {
 	if len(ots.TimeSeries) != len(values) {
 		return errors.New("Flow data was not the same length as the target in the b file")
 	}
-	for idx := range ots.TimeSeries {
-		ots.TimeSeries[idx] = FlowData{idx, values[idx]}
+	for idx, fd := range ots.TimeSeries {
+		ots.TimeSeries[idx] = FlowData{fd.Index, values[idx]}
 	}
 	return nil
 }
@@ -91,7 +91,7 @@ func (ots *OutletTS) ToBytes() ([]byte, error) {
 				result = append(result, "\n"...) //zero based will return on the 6th element (after the 5th) before writing the 6th
 			}
 		}
-		result = append(result, convertFloatToBfileCellValue(fd.Flow)...) //
+		result = append(result, fmt.Sprintf("%*d%s", 8, fd.Index, convertFloatToBfileCellValue(fd.Flow))...) //
 	}
 	result = append(result, "\n"...)
 	return result, nil

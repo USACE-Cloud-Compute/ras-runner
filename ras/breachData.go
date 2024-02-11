@@ -35,6 +35,13 @@ func InitBreachData(rows []string) ([]BfileBlock, error) {
 	}
 	blocks := make([]BfileBlock, 0)
 	blocks = append(blocks, &headerDefaultBlock)
+	breachCount, err := getIntFromCellValue(rows[1])
+	if err != nil {
+		return blocks, err
+	}
+	if breachCount == 0 {
+		return blocks, nil
+	}
 	//take the remaining rows and create breach data instances for each.
 	breachdataRows, err := getBreachRows(rows)
 	if err != nil {
@@ -131,7 +138,7 @@ func SplitIntoBreachDataArray(rows [][]string) ([]BfileBlock, error) {
 		bd := BreachData{
 			Name:                   "",
 			SNetID:                 sNetID,
-			NumRows:                numBreachingStructures,
+			NumRows:                numRowsInStructureBreachData,
 			FailureElevationRowNum: startingElevationRowIndex,
 			BreachDataRows:         specificRows,
 		}

@@ -10,7 +10,24 @@ const ONE_BREACH_FILE string = "/workspaces/cc-ras-runner/testData/DamBreachOver
 const MULTI_BREACH_FILE string = "/workspaces/cc-ras-runner/testData/multiDamBreach.b01"
 const FRAG_CURVE_PATH string = "/workspaces/cc-ras-runner/testData/testFragilityCurveOutput.json"
 const BALD_EAGLE_HDF_PATH string = "/BaldEagleDamBrk.g03.hdf"
+const Elk_At_Sutton_BFile string = "/workspaces/cc-ras-runner/testData/ElkRiver_at_Sutton.b01"
 
+func TestRead_ElkAtSutton(t *testing.T) {
+	bfile, err := InitBFile(Elk_At_Sutton_BFile)
+	if err != nil {
+		t.Fail()
+	}
+	for _, bfileblock := range bfile.BfileBlocks {
+		outts, ok := bfileblock.(*OutletTS)
+		if ok {
+			fmt.Println("Outlet TS found")
+			fmt.Println(outts.Name)
+			fmt.Println(outts.RowCount)
+			return
+		}
+	}
+	t.Fail()
+}
 func TestWrite(t *testing.T) {
 	bf, err := InitBFile(ONE_BREACH_FILE) // hold the original for comparison (expected)
 	if err != nil {
