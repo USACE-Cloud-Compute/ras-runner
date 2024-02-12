@@ -62,8 +62,6 @@ Breach Data
     3000     510               8       8       T       T       1
      5519.999999       5     545       F       F       T                       F       F
        2
-       0       0       1       1
-       
 Hydrograph Data
        2
        F       F       T       F       F               F
@@ -85,15 +83,10 @@ Lateral Inflows, Ungaged Lateral Inflows, Outlet TS, and Observed DSS
        2       0       F       TOutlet                 F
 Outlet TS - SA Conn: Lewsville (Outlet TS: Outlet)
        2
-       0    1000    8760    1000
- 3.4E+38
+       01000.000    87601000.000
 Stage and Flow Boundary and Ungaged Areas
        0       0
 Time Slicing Parameters
        F
 HYDROGRAPH LOCATIONS
  0 
-Rules (number of rule sets, number of lookbacks, number of tables)
-       0       0       0
-Extra Commands
-       0

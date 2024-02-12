@@ -16,7 +16,7 @@ import (
 func UpdateBfileAction(action cc.Action, modelDir string) error {
 	// Assumes bFile and fragility curve file  were copied local with the CopyLocal action.
 	log.Printf("Ready to update bFile.")
-	bFileName := action.Parameters["bFile"].(string) //these may eventually need to be map[string]any instead of strings. Look at Kanawah-runner manifests as examples.
+	bFileName := action.Parameters.GetStringOrFail("bFile")
 	bfilePath := fmt.Sprintf("%v/%v", modelDir, bFileName)
 	if !fileExists(bfilePath) {
 		log.Fatalf("Input source %s, was not found in local directory. Run copy-local first", bfilePath)
@@ -25,7 +25,7 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fcFileName := action.Parameters["fcFile"].(string)
+	fcFileName := action.Parameters.GetStringOrFail("fcFile")
 	fcFilePath := fmt.Sprintf("%v/%v", modelDir, fcFileName)
 	fcFileBytes, err := os.ReadFile(fcFilePath)
 	if err != nil {
@@ -35,15 +35,18 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 	var fcResult fragilitycurve.ModelResult
 	err = json.Unmarshal(fcFileBytes, &fcResult)
 	if err != nil {
-		log.Fatalf("Error getting input source %s", fcFileName)
+		log.Fatalf("Error unmarshaling fragility curve from %s", fcFileName)
 		return err
 	}
 	for _, fclr := range fcResult.Results {
-		bf.AmmendBreachElevations(fclr.Name, fclr.FailureElevation)
+		err = bf.AmmendBreachElevations(fclr.Name, fclr.FailureElevation)
+		if err != nil {
+			return err
+		}
 	}
 	resultBytes, err := bf.Write()
 	if err != nil {
-		log.Fatalf("Error getting input source %s", fcFileName)
+		log.Fatal("Error writing b file")
 		return err
 	}
 	return os.WriteFile(bfilePath, resultBytes, 0600)

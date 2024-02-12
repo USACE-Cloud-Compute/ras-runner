@@ -32,8 +32,8 @@ func InitOutletTS(rows []string) (*OutletTS, error) {
 			if err != nil {
 				return &output, err
 			}
-			for idx, fd := range tmpFlowData {
-				flowdata[idx] = fd
+			for jdx, fd := range tmpFlowData {
+				flowdata[(idx-2)*5+jdx] = fd
 			}
 		}
 	}

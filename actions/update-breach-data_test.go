@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -25,6 +26,7 @@ func TestBfileAction(t *testing.T) {
 	}
 	err := UpdateBfileAction(action, modelDir)
 	if err != nil {
+		fmt.Println(err)
 		t.Fail()
 	}
 }

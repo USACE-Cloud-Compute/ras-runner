@@ -101,8 +101,13 @@ func getBreachRows(bfileRows []string) ([][]string, error) {
 				}
 				breachDataRows = append(breachDataRows, row)
 				i++ //next line
+				if i >= len(bfileRows) {
+					break
+				} else {
+					isBreachData = rowIsBreachData(rowText)
+				}
+
 				rowText = bfileRows[i]
-				isBreachData = rowIsBreachData(rowText)
 			}
 			if breachDataRows != nil {
 				break

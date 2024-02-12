@@ -28,6 +28,37 @@ func TestRead_ElkAtSutton(t *testing.T) {
 	}
 	t.Fail()
 }
+func TestReadModifyWrite_ElkAtSutton(t *testing.T) {
+	bfile, err := InitBFile(Elk_At_Sutton_BFile)
+	if err != nil {
+		t.Fail()
+	}
+	for _, bfileblock := range bfile.BfileBlocks {
+		outts, ok := bfileblock.(*OutletTS)
+		if ok {
+			fmt.Println("Outlet TS found")
+			fmt.Println(outts.Name)
+			fmt.Println(outts.RowCount)
+			bytearray, err := outts.ToBytes()
+			if err != nil {
+				t.Fail()
+			}
+			fmt.Println(string(bytearray))
+			values := make([]float64, outts.RowCount)
+			for idx := 0; idx < len(values); idx++ {
+				values[idx] = float64(idx)
+			}
+			outts.UpdateFloatArray(values)
+			bytearray, err = outts.ToBytes()
+			if err != nil {
+				t.Fail()
+			}
+			fmt.Println(string(bytearray))
+			return
+		}
+	}
+	t.Fail()
+}
 func TestWrite(t *testing.T) {
 	bf, err := InitBFile(ONE_BREACH_FILE) // hold the original for comparison (expected)
 	if err != nil {
