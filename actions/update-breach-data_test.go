@@ -17,6 +17,7 @@ func TestBfileAction(t *testing.T) {
 	parameters := make(map[string]any)
 	parameters["bFile"] = filepath.Base(ONE_BREACH_FILE) //these may eventually need to be map[string]any instead of strings. Look at Kanawah-runner manifests as examples.
 	parameters["fcFile"] = filepath.Base(FRAG_CURVE_PATH)
+	parameters["geoHdfFile"] = filepath.Base(BALD_EAGLE_HDF_PATH)
 	modelDir := filepath.Dir(ONE_BREACH_FILE)
 	action := cc.Action{
 		Name:        "update-bfile",

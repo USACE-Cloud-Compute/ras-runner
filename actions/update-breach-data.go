@@ -25,11 +25,21 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Print("Creating SNET ID to name map from geometry file")
+	hdfFileName := action.Parameters.GetStringOrFail("geoHdfFile")
+	hdfFilePath := fmt.Sprintf("%v/%v", modelDir, hdfFileName)
+	err = bf.SetSNetIDToNameFromGeoHDF(hdfFilePath)
+	if err != nil {
+		return err
+	}
+
+	log.Print("Loading Fragility Curve Results")
 	fcFileName := action.Parameters.GetStringOrFail("fcFile")
 	fcFilePath := fmt.Sprintf("%v/%v", modelDir, fcFileName)
 	fcFileBytes, err := os.ReadFile(fcFilePath)
 	if err != nil {
-		log.Fatalf("Error getting input source %s", fcFileName) //why don't we use err?
+		log.Fatalln(err)
 		return err
 	}
 	var fcResult fragilitycurve.ModelResult
