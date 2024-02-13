@@ -4,29 +4,22 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"strconv"
 	"strings"
 	"unicode"
-
-	"github.com/usace/go-hdf5"
-	"github.com/usace/hdf5utils"
 )
 
 const CELL_SIZE_ERROR string = "the row was not able to be divided evenly by the cell size without remainder. Ensure the b-file has not been modified outside of RAS"
 const BREACH_DATA_HEADER string = "Breach Data"
-const STRUCTURE_DATA_PATH string = "Geometry/Structures/Attributes/"
 const TS_OUTFLOW_HEADER string = "Outlet TS - "
 
 // Parsing of these files is guided by the investigation here: https://www.hec.usace.army.mil/confluence/display/FFRD/Deciphering+Breach+Data+in+Intermediate+Files
 // nomenclature used in comments, as well as method and variable names is done to reflect the language on the above page.
 
 type Bfile struct {
-	Filename string
-	//Rows                []string
-	//StructureBreachData []BreachData
+	Filename           string
 	BfileBlocks        []BfileBlock
 	SNETidToStructName map[string]int // This should be initialized with a geometry hdf using InitSNETidToStructName("*.g**.hdf")
 }
@@ -199,45 +192,12 @@ func (bf Bfile) Write() ([]byte, error) {
 	return b, nil
 }
 
-func fileExists(filePath string) bool {
-	_, error := os.Stat(filePath)
-	return !errors.Is(error, os.ErrNotExist)
-}
-
 // Create a dictionary of SNET-ID to structure name from the Geometry HDF.
 func (bf *Bfile) SetSNetIDToNameFromGeoHDF(filePath string) error {
-	//need to get a handle on the table located at STRUCTURE_DATA_PATH
-	if !fileExists(filePath) {
-		return errors.New("file doesn't exist")
-	}
-	hdfReadOptions := hdf5utils.HdfReadOptions{
-		Dtype:              0,
-		Strsizes:           hdf5utils.HdfStrSet{},
-		IncrementalRead:    false,
-		IncrementalReadDir: 0,
-		IncrementSize:      0,
-		ReadOnCreate:       false,
-		Filepath:           filePath,
-		File:               &hdf5.File{},
-	}
-	file, err := hdf5utils.NewHdfDataset(STRUCTURE_DATA_PATH, hdfReadOptions)
+	snetToNameDictionary, err := ReadSNetIDToNameFromGeoHDF(filePath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-
-	//Read the column. Should get some slice of structure names from "Connection" at column index 5
-	var structureNames []string
-	err = file.ReadColumn(5, structureNames) //this probably assigns the data to param 2?
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//the SNET ID is the index of the structure in the table at STRUCTURE_DATA_PATH +2
-	sNetIDDict := make(map[string]int, len(structureNames))
-	for index, name := range structureNames {
-		sNetIDDict[name] = index + 2
-	}
-
-	bf.SNETidToStructName = sNetIDDict
+	bf.SNETidToStructName = snetToNameDictionary
 	return nil
 }
