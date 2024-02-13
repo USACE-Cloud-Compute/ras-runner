@@ -51,15 +51,6 @@ func InitBreachData(rows []string) ([]BfileBlock, error) {
 	blocks = append(blocks, breachDatas...)
 	return blocks, err
 }
-func (bd BreachData) getRowsAsString() []string {
-	var rows []string
-	for i := 0; i < len(bd.BreachDataRows); i++ {
-		row := bd.BreachDataRows[i]
-		mergedRow := strings.Join(row, "")
-		rows = append(rows, mergedRow)
-	}
-	return rows
-}
 
 // The b file is formated into columns 8 characters wide.
 // This function returns a row as a string array of "cells" 8 char wide.
@@ -140,6 +131,9 @@ func SplitIntoBreachDataArray(rows [][]string) ([]BfileBlock, error) {
 		specificRows := rows[structureFirstRowIndex:(structureFirstRowIndex + numRowsInStructureBreachData)]
 		cellValue := specificRows[0][0] //Always the first cell for a set of structure breach data.
 		sNetID, err := getIntFromCellValue(cellValue)
+		if err != nil {
+			return nil, err
+		}
 		bd := BreachData{
 			Name:                   "",
 			SNetID:                 sNetID,

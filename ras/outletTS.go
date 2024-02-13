@@ -73,7 +73,7 @@ func (ots *OutletTS) UpdateFloat(value float64) error {
 }
 func (ots *OutletTS) UpdateFloatArray(values []float64) error {
 	if len(ots.TimeSeries) != len(values) {
-		return errors.New("Flow data was not the same length as the target in the b file")
+		return errors.New("flow data was not the same length as the target in the b file")
 	}
 	for idx, fd := range ots.TimeSeries {
 		ots.TimeSeries[idx] = FlowData{fd.Index, values[idx]}
