@@ -7,3 +7,4 @@ actions/_*
 .vscode/*
 ras-runner
 main
+*.hdf
