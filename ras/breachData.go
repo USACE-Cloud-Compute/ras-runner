@@ -18,7 +18,7 @@ func (bd *BreachData) UpdateFloat(value float64) error {
 	bd.BreachDataRows[bd.FailureElevationRowNum][0] = convertFloatToBfileCellValue(value)
 	return nil
 }
-func (bd *BreachData) UpdateFloatArray(values []float64) error {
+func (bd *BreachData) UpdateFloatArray(values []float32) error {
 	return errors.New("updating float arrays not currently supported for breach data, could be used to update breach progression")
 }
 func (bd *BreachData) ToBytes() ([]byte, error) {

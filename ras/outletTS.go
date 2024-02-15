@@ -14,7 +14,7 @@ type OutletTS struct {
 }
 type FlowData struct {
 	Index int
-	Flow  float64
+	Flow  float32
 }
 
 func InitOutletTS(rows []string) (*OutletTS, error) {
@@ -57,13 +57,14 @@ func parseRowString(rowString string) ([]FlowData, error) {
 		if err != nil {
 			return []FlowData{}, errors.New("could not parse index")
 		}
-		flow, err := strconv.ParseFloat(strings.TrimLeft(rowString[valueLength+i*valueLength*2:valueLength*2+i*valueLength*2], " "), 64)
+		flow, err := strconv.ParseFloat(strings.TrimLeft(rowString[valueLength+i*valueLength*2:valueLength*2+i*valueLength*2], " "), 32)
+		flow32 := float32(flow)
 		if err != nil {
 			return []FlowData{}, errors.New("could not parse flow")
 		}
 		result[i] = FlowData{
 			Index: index,
-			Flow:  flow,
+			Flow:  flow32,
 		}
 	}
 	return result, nil
@@ -71,7 +72,7 @@ func parseRowString(rowString string) ([]FlowData, error) {
 func (ots *OutletTS) UpdateFloat(value float64) error {
 	return errors.New("cannot update float on outlet timeseries")
 }
-func (ots *OutletTS) UpdateFloatArray(values []float64) error {
+func (ots *OutletTS) UpdateFloatArray(values []float32) error {
 	if len(ots.TimeSeries) != len(values) {
 		return errors.New("flow data was not the same length as the target in the b file")
 	}
@@ -91,7 +92,7 @@ func (ots *OutletTS) ToBytes() ([]byte, error) {
 				result = append(result, "\n"...) //zero based will return on the 6th element (after the 5th) before writing the 6th
 			}
 		}
-		result = append(result, fmt.Sprintf("%*d%s", 8, fd.Index, convertFloatToBfileCellValue(fd.Flow))...) //
+		result = append(result, fmt.Sprintf("%*d%s", 8, fd.Index, convertFloatToBfileCellValue(float64(fd.Flow)))...) //
 	}
 	result = append(result, "\n"...)
 	return result, nil

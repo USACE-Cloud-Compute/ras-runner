@@ -25,7 +25,7 @@ type Bfile struct {
 }
 type BfileBlock interface {
 	UpdateFloat(value float64) error
-	UpdateFloatArray(values []float64) error
+	UpdateFloatArray(values []float32) error
 	ToBytes() ([]byte, error)
 }
 type DefaultBlock struct {
@@ -35,7 +35,7 @@ type DefaultBlock struct {
 func (db *DefaultBlock) UpdateFloat(value float64) error {
 	return errors.New("cannot update float on default blocks")
 }
-func (db *DefaultBlock) UpdateFloatArray(values []float64) error {
+func (db *DefaultBlock) UpdateFloatArray(values []float32) error {
 	return errors.New("cannot update float array on default blocks")
 }
 func (db *DefaultBlock) ToBytes() ([]byte, error) {

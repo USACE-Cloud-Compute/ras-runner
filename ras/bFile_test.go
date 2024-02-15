@@ -44,9 +44,9 @@ func TestReadModifyWrite_ElkAtSutton(t *testing.T) {
 				t.Fail()
 			}
 			fmt.Println(string(bytearray))
-			values := make([]float64, outts.RowCount)
+			values := make([]float32, outts.RowCount)
 			for idx := 0; idx < len(values); idx++ {
-				values[idx] = float64(idx)
+				values[idx] = float32(idx)
 			}
 			outts.UpdateFloatArray(values)
 			bytearray, err = outts.ToBytes()

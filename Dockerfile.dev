@@ -52,12 +52,15 @@ RUN wget ${HDF_NEXUS_URL} &&\
 
 #download test data. I'd like to move this to the test data folder, but couldn't get the commmand working. 
 ARG NEXUS_TEST_DATA="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/BaldEagleDamBrk.g03.hdf"
-RUN wget ${NEXUS_TEST_DATA}
+ARG NEXUS_BLUESTONE="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/BluestoneLocal.p01.tmp.hdf"
+ARG NEXUS_ELKATSUTTON="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/ElkRiver_at_Sutton.p01.tmp.hdf"
+ARG NEXUS_UPPERNEW="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/UpperNew.p01.tmp.hdf"
+RUN wget ${NEXUS_TEST_DATA} &&\
+    wget ${NEXUS_BLUESTONE} &&\
+    wget ${NEXUS_ELKATSUTTON} &&\
+    wget ${NEXUS_UPPERNEW}
 
-
-RUN cd /src/ras-runner &&\
-    go mod tidy 
-    go build
+RUN cd /src/ras-runner
 
 
 

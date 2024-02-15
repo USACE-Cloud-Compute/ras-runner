@@ -6,3 +6,4 @@ RAS_Linux_test_setup.zip
 actions/_*
 .vscode/*
 ras-runner
+main

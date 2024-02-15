@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"ras-runner/ras"
+	"reflect"
 	"strings"
 
 	"github.com/usace/cc-go-sdk"
@@ -21,7 +22,7 @@ func UpdateOutletTSAction(action cc.Action, modelDir string) error {
 	outletTSName := action.Parameters.GetStringOrFail("outletTS")
 	bfilePath := fmt.Sprintf("%v/%v", modelDir, bFileName)
 	if !fileExists(bfilePath) {
-		return errors.New(fmt.Sprintf("Input source %s, was not found in local directory. Run copy-local first", bfilePath))
+		return fmt.Errorf("input source %s, was not found in local directory. Run copy-local first", bfilePath)
 	}
 	bf, err := ras.InitBFile(bfilePath)
 	if err != nil {
@@ -44,22 +45,23 @@ func UpdateOutletTSAction(action cc.Action, modelDir string) error {
 	hdfDataPath := action.Parameters.GetStringOrFail("hdfDataPath")
 	hdfFileName := action.Parameters.GetStringOrFail("hdfFile")
 	hdfFilePath := fmt.Sprintf("%v/%v", modelDir, hdfFileName)
-	hdfReadOptions := hdf5utils.HdfReadOptions{
-		Dtype:              0,
-		Strsizes:           hdf5utils.HdfStrSet{},
-		IncrementalRead:    false,
-		IncrementalReadDir: 0,
-		IncrementSize:      0,
-		ReadOnCreate:       false,
-		Filepath:           hdfFilePath,
-		File:               &hdf5.File{},
-	}
-	dataset, err := hdf5utils.NewHdfDataset(hdfDataPath, hdfReadOptions)
+	destfile, err := hdf5.OpenFile(hdfFilePath, hdf5.F_ACC_RDWR)
 	if err != nil {
 		return err
 	}
-	flows := make([]float64, outletTS.RowCount)
-	err = dataset.ReadColumn(3, flows)
+	options := hdf5utils.HdfReadOptions{
+		Dtype:        reflect.Float32,
+		File:         destfile,
+		ReadOnCreate: true,
+	}
+	destVals, err := hdf5utils.NewHdfDataset(hdfDataPath, options)
+	if err != nil {
+		return err
+	}
+	defer destVals.Close()
+
+	flows := make([]float32, outletTS.RowCount)
+	err = destVals.ReadColumn(1, &flows)
 	if err != nil {
 		return err
 	}
