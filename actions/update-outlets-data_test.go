@@ -11,7 +11,7 @@ import (
 const ELKATSUTTON_HDF string = "/ElkRiver_at_Sutton.p01.tmp.hdf"
 const BLUESTONELOCAL_HDF string = "/BluestoneLocal.p01.tmp.hdf"
 const UPPERNEW_HDF string = "/UpperNew.p01.tmp.hdf"
-const ELKATSUTTON_BFILE = "/workspaces/cc-ras-runner/testData/ElkRiver_at_Sutton.b01"
+const ELKATSUTTON_BFILE = "/ElkRiver_at_Sutton.b01"
 
 func TestOutletTSAction(t *testing.T) {
 	parameters := make(map[string]any)

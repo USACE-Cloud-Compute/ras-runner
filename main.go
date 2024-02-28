@@ -52,6 +52,12 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+		case "update-outlet-ts-bfile":
+			// Assumes bFile and pxx.tmp.hdf file  were copied local with the CopyLocal action.
+			err := actions.UpdateOutletTSAction(action, MODEL_DIR)
+			if err != nil {
+				log.Fatal(err)
+			}
 		case "create-ras-tmp":
 			log.Printf("Ready to create temp for %s\n", action.Name)
 			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
