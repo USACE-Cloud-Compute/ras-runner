@@ -44,8 +44,12 @@ RUN wget ${HDF_NEXUS_URL} &&\
     cd /hdfsrc &&\
     ./configure --prefix=/hdf --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
     make &&\
-    make install &&\
-    cd /workspaces/cc-ras-runner &&\
+    make install
+
+#Copy src code into docker container
+RUN mkdir -p src/ras-runner
+COPY ./ /src/ras-runner
+RUN cd /src/ras-runner &&\
     go mod tidy &&\
     go build
 
@@ -60,7 +64,7 @@ RUN mkdir -p /sim/model
 #copies ras binaries 
 COPY --from=builder /ras /ras
 #copies the ras runner binaries
-COPY --from=builder /workspaces/cc-ras-runner/ras-runner /ras/ras-runner
+COPY --from=builder /src/ras-runner/ras-runner /ras/ras-runner
 #copies hdf binaries
 COPY --from=builder /hdf /hdf
 
