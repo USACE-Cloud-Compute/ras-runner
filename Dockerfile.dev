@@ -1,6 +1,5 @@
 FROM rockylinux:8
 
-
 RUN yum -y update &&\ 
     yum -y install git &&\
     yum -y install wget &&\
@@ -10,23 +9,19 @@ RUN yum -y update &&\
     yum -y install make &&\
     yum -y install libcurl-devel.x86_64 &&\
     yum -y install openssl-devel.x86_64 &&\
-    mkdir -p /src/ras-runner &&\
     mkdir  /ras
 
-#names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus. 
-ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/HEC-RAS_610_Linux_EngineOnly.zip
-ARG RAS_FILE=HEC-RAS_610_Linux_EngineOnly.zip
-ARG RAS_BIN_DIR=HEC-RAS_610_Linux_EngineOnly/bin
-ARG RAS_LIB_DIR=HEC-RAS_610_Linux_EngineOnly/libs
+#names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
+ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/HEC-RAS_641_Linux_EngineOnly.zip
+ARG RAS_FILE=HEC-RAS_641_Linux_EngineOnly.zip
+ARG RAS_BIN_DIR=HEC-RAS_641_Linux_EngineOnly/bin
+ARG RAS_LIB_DIR=HEC-RAS_641_Linux_EngineOnly/libs
 #download RAS and put the file in the right place. Give them permissions to execute
 RUN wget ${NEXUS_RAS_URL} &&\ 
     unzip ${RAS_FILE} &&\
     mv /${RAS_BIN_DIR} /ras/libs &&\
     mv /${RAS_LIB_DIR} /ras/bin &&\
     chmod -R +x /ras/* 
-
-
-COPY go.mod main.go /src/ras-runner/
 
 #set up Go
 RUN wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz -P / &&\
@@ -35,8 +30,8 @@ ENV GOROOT=/go
 ENV GOPATH=/src/go
 ENV PATH=/go/bin:$PATH
 
-#set up HDF
-ARG HDF_FILE=hdf5-1.14.3.tar.gz
+#set up HDF, AK commmented rasmapperlib is using 1.12. may cause issues.  
+ARG HDF_FILE=hdf5-1.14.3.tar.gz 
 ARG HDF_NEXUS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/hdf/hdf5-1.14.3.tar.gz
 ENV CGO_LDFLAGS="-L/hdf/lib"
 ENV CGO_CFLAGS="-I/hdf/include"
@@ -50,18 +45,17 @@ RUN wget ${HDF_NEXUS_URL} &&\
     make &&\
     make install
 
-#download test data. I'd like to move this to the test data folder, but couldn't get the commmand working. 
+#download test data.
 ARG NEXUS_TEST_DATA="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/BaldEagleDamBrk.g03.hdf"
-ARG NEXUS_BLUESTONE="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/BluestoneLocal.p01.tmp.hdf"
-ARG NEXUS_ELKATSUTTON="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/ElkRiver_at_Sutton.p01.tmp.hdf"
-ARG NEXUS_UPPERNEW="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/UpperNew.p01.tmp.hdf"
-RUN wget ${NEXUS_TEST_DATA} &&\
-    wget ${NEXUS_BLUESTONE} &&\
-    wget ${NEXUS_ELKATSUTTON} &&\
-    wget ${NEXUS_UPPERNEW}
+RUN wget ${NEXUS_TEST_DATA}
 
-RUN cd /src/ras-runner
+ARG KANAWHA_TEST_DATA="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/kanawha_test_data.zip"
+ARG KANAWHA_TEST_DATA_FILE="kanawha_test_data.zip"
+RUN wget ${KANAWHA_TEST_DATA} &&\
+    unzip ${KANAWHA_TEST_DATA_FILE}
 
+#Should/could condense this container into fewer layers. It was originally broken out to better understand what Randy was
+#doing before I messed with it -bbb
 
 
 
