@@ -19,8 +19,8 @@ ARG RAS_LIB_DIR=HEC-RAS_641_Linux_EngineOnly/libs
 #download RAS and put the file in the right place. Give them permissions to execute
 RUN wget ${NEXUS_RAS_URL} &&\ 
     unzip ${RAS_FILE} &&\
-    mv /${RAS_BIN_DIR} /ras/libs &&\
-    mv /${RAS_LIB_DIR} /ras/bin &&\
+    mv /${RAS_LIB_DIR} /ras/libs &&\
+    mv /${RAS_BIN_DIR} /ras/bin &&\
     chmod -R +x /ras/* 
 
 #set up Go
