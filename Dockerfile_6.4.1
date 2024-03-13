@@ -54,7 +54,7 @@ RUN cd /src/ras-runner &&\
     go build
 
 #Set up the production environment
-FROM rockylinux:8
+FROM rockylinux:8 as prod
 
 ENV PATH=/hdf/bin:/ras/bin:/ras:$PATH
 ENV LD_LIBRARY_PATH=/hdf/lib
