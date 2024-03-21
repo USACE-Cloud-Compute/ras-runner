@@ -45,10 +45,12 @@ func UpdateOutletTSAction(action cc.Action, modelDir string) error {
 	hdfDataPath := action.Parameters.GetStringOrFail("hdfDataPath")
 	hdfFileName := action.Parameters.GetStringOrFail("hdfFile")
 	hdfFilePath := fmt.Sprintf("%v/%v", modelDir, hdfFileName)
-	destfile, err := hdf5.OpenFile(hdfFilePath, hdf5.F_ACC_RDWR)
+	destfile, err := hdf5.OpenFile(hdfFilePath, hdf5.F_ACC_RDWR) //@TODO ..not closing..
 	if err != nil {
 		return err
 	}
+	defer destfile.Close()
+
 	options := hdf5utils.HdfReadOptions{
 		Dtype:        reflect.Float32,
 		File:         destfile,

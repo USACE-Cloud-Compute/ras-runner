@@ -15,6 +15,8 @@ const CELL_SIZE_ERROR string = "the row was not able to be divided evenly by the
 const BREACH_DATA_HEADER string = "Breach Data"
 const TS_OUTFLOW_HEADER string = "Outlet TS - "
 
+var TS_OUTFLOW_SUFFIX []byte = []byte("\n 3.4E+38")
+
 // Parsing of these files is guided by the investigation here: https://www.hec.usace.army.mil/confluence/display/FFRD/Deciphering+Breach+Data+in+Intermediate+Files
 // nomenclature used in comments, as well as method and variable names is done to reflect the language on the above page.
 
@@ -27,9 +29,18 @@ type BfileBlock interface {
 	UpdateFloat(value float64) error
 	UpdateFloatArray(values []float32) error
 	ToBytes() ([]byte, error)
+	Header() string
 }
 type DefaultBlock struct {
 	Rows []string
+}
+
+// assuming row 0 is always the header for a default block
+func (db *DefaultBlock) Header() string {
+	if len(db.Rows) > 0 {
+		return db.Rows[0]
+	}
+	return ""
 }
 
 func (db *DefaultBlock) UpdateFloat(value float64) error {
@@ -87,6 +98,10 @@ func (bf *Bfile) readBFile() error {
 			}
 
 		}
+	}
+	//add the final block to the blocks slice
+	if len(blockRows) != 0 {
+		blocks = append(blocks, blockRows)
 	}
 	bFileBlocks := make([]BfileBlock, 0)
 	for _, block := range blocks {
@@ -181,11 +196,17 @@ func (bf *Bfile) AmmendBreachElevations(structureName string, newFailureElevatio
 // Write writes bFile to byte array
 func (bf Bfile) Write() ([]byte, error) {
 	//for each row in th file
+	//@TODO: using a byte slice to compose a large string is not efficient.  Use a strings.Builder or a bytes.Buffer
 	b := make([]byte, 0)
 	for _, block := range bf.BfileBlocks {
 		blockBytes, err := block.ToBytes()
 		if err != nil {
 			return b, err
+		}
+		//switch with a single case is bad form, but I'm gussing we will have more corner cases so I'm using the switch over an if statement
+		switch {
+		case strings.HasPrefix(block.Header(), TS_OUTFLOW_HEADER):
+			blockBytes = append(blockBytes, TS_OUTFLOW_SUFFIX...)
 		}
 		b = append(b, blockBytes...)
 	}

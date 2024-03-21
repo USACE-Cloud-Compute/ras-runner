@@ -14,6 +14,10 @@ type BreachData struct {
 	BreachDataRows         [][]string
 }
 
+func (bd *BreachData) Header() string {
+	return "Breach Data" //@TODO: not sure how to handle this
+}
+
 func (bd *BreachData) UpdateFloat(value float64) error {
 	bd.BreachDataRows[bd.FailureElevationRowNum][0] = convertFloatToBfileCellValue(value)
 	return nil

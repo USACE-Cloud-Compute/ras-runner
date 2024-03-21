@@ -34,6 +34,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/usace/filesapi v0.0.0-20240105190612-7968d4f3fe61 // indirect
+	github.com/usace/filesapi v0.0.0-20240315200543-841da1a812a3 // indirect
 	github.com/usace/filestore v0.0.0-20230309205740-49d6e1f06e4a // indirect
 )

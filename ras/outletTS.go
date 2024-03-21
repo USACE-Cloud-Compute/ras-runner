@@ -69,9 +69,15 @@ func parseRowString(rowString string) ([]FlowData, error) {
 	}
 	return result, nil
 }
+
+func (ots *OutletTS) Header() string {
+	return fmt.Sprintf("%v%v\n", TS_OUTFLOW_HEADER, ots.Name)
+}
+
 func (ots *OutletTS) UpdateFloat(value float64) error {
 	return errors.New("cannot update float on outlet timeseries")
 }
+
 func (ots *OutletTS) UpdateFloatArray(values []float32) error {
 	if len(ots.TimeSeries) != len(values) {
 		return errors.New("flow data was not the same length as the target in the b file")
@@ -81,6 +87,7 @@ func (ots *OutletTS) UpdateFloatArray(values []float32) error {
 	}
 	return nil
 }
+
 func (ots *OutletTS) ToBytes() ([]byte, error) {
 	result := make([]byte, 0)
 	result = append(result, fmt.Sprintf("%v%v\n", TS_OUTFLOW_HEADER, ots.Name)...)
