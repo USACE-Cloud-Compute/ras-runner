@@ -1,0 +1,224 @@
+package ras
+
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"math"
+	"os"
+	"strconv"
+	"strings"
+	"unicode"
+)
+
+const CELL_SIZE_ERROR string = "the row was not able to be divided evenly by the cell size without remainder. Ensure the b-file has not been modified outside of RAS"
+const BREACH_DATA_HEADER string = "Breach Data"
+const TS_OUTFLOW_HEADER string = "Outlet TS - "
+
+var TS_OUTFLOW_SUFFIX []byte = []byte("\n 3.4E+38")
+
+// Parsing of these files is guided by the investigation here: https://www.hec.usace.army.mil/confluence/display/FFRD/Deciphering+Breach+Data+in+Intermediate+Files
+// nomenclature used in comments, as well as method and variable names is done to reflect the language on the above page.
+
+type Bfile struct {
+	Filename           string
+	BfileBlocks        []BfileBlock
+	SNETidToStructName map[string]int // This should be initialized with a geometry hdf using InitSNETidToStructName("*.g**.hdf")
+}
+type BfileBlock interface {
+	UpdateFloat(value float64) error
+	UpdateFloatArray(values []float32) error
+	ToBytes() ([]byte, error)
+	Header() string
+}
+type DefaultBlock struct {
+	Rows []string
+}
+
+// assuming row 0 is always the header for a default block
+func (db *DefaultBlock) Header() string {
+	if len(db.Rows) > 0 {
+		return db.Rows[0]
+	}
+	return ""
+}
+
+func (db *DefaultBlock) UpdateFloat(value float64) error {
+	return errors.New("cannot update float on default blocks")
+}
+func (db *DefaultBlock) UpdateFloatArray(values []float32) error {
+	return errors.New("cannot update float array on default blocks")
+}
+func (db *DefaultBlock) ToBytes() ([]byte, error) {
+	bytedata := make([]byte, 0)
+	for _, row := range db.Rows {
+		bytedata = append(bytedata, fmt.Sprintf("%s\n", row)...)
+	}
+	return bytedata, nil
+}
+func InitBFile(bfilePath string) (*Bfile, error) {
+	bf := Bfile{
+		Filename: bfilePath,
+	}
+
+	//read bfile and gather all blocks.
+	err := bf.readBFile()
+	if err != nil {
+		return &bf, err
+	}
+	return &bf, nil
+
+}
+
+// read the file into memory as a slice of string, where each line/row is a string.
+func (bf *Bfile) readBFile() error {
+	file, err := os.Open(bf.Filename)
+	if err != nil {
+		return err
+	}
+	//close the file when we're done
+	defer file.Close()
+
+	//read the file line by line
+	blocks := make([][]string, 0)
+	scanner := bufio.NewScanner(file)
+	blockRows := make([]string, 0)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(blockRows) == 0 {
+			blockRows = append(blockRows, line) //must be the first header
+		} else {
+			if rowIsNotAHeader(line) {
+				blockRows = append(blockRows, line) //must not be a header
+			} else {
+				blocks = append(blocks, blockRows)
+				//new block
+				blockRows = make([]string, 0)
+				blockRows = append(blockRows, line) //must add the line not to loose it
+			}
+
+		}
+	}
+	//add the final block to the blocks slice
+	if len(blockRows) != 0 {
+		blocks = append(blocks, blockRows)
+	}
+	bFileBlocks := make([]BfileBlock, 0)
+	for _, block := range blocks {
+		if strings.Contains(block[0], BREACH_DATA_HEADER) {
+			breachData, err := InitBreachData(block)
+			if err != nil {
+				return err
+			}
+			bFileBlocks = append(bFileBlocks, breachData...)
+		} else if strings.Contains(block[0], TS_OUTFLOW_HEADER) {
+			tsOutflowData, err := InitOutletTS(block)
+			if err != nil {
+				return err
+			}
+			bFileBlocks = append(bFileBlocks, tsOutflowData)
+		} else {
+			db := DefaultBlock{Rows: block}
+			bFileBlocks = append(bFileBlocks, &db)
+		}
+	}
+	bf.BfileBlocks = bFileBlocks
+	return nil
+}
+
+func (bf *Bfile) WriteBreachRows(bds []BreachData, bfilePath string) ([]byte, error) {
+	return nil, nil
+}
+
+// /Headers always start with a letter, Checks if the row starts with a letter, if it doesn't, returns false.
+func rowIsNotAHeader(row string) bool {
+	var firstLetter rune = rune(row[0]) //first letter as a rune / kinda like a char.
+	isAHeader := unicode.IsLetter(firstLetter)
+	return !isAHeader
+}
+
+// /checks that a row isn't completely empty. if it is, return true, if not, false.
+func rowIsNotWhiteSpace(row string) bool {
+	for i := 0; i < len(row); i++ {
+		charecter := row[i]
+		if !unicode.IsSpace(rune(charecter)) {
+			return true
+		}
+	}
+	return false
+}
+
+func convertFloatToBfileCellValue(fl float64) string {
+	// Round the float to 8 digits
+	rounded := math.Round(fl*1e8) / 1e8
+
+	// Convert the float to a string with 8 characters
+	result := fmt.Sprintf("%8.8f", rounded)
+
+	// Trim the excess characters
+	if len(result) > 8 {
+		result = result[:8]
+	}
+
+	return result
+}
+
+func getIntFromCellValue(cell string) (int, error) {
+	trimmedCell := strings.TrimSpace(cell)
+	return strconv.Atoi(trimmedCell)
+}
+
+// AmmendBreachElevations finds the structure breach data which matches the structureName and updates it's elevation in the breach data rows.
+func (bf *Bfile) AmmendBreachElevations(structureName string, newFailureElevation float64) error {
+	//searching for the right breach data with a loop seems inefficient. I could bring in the geom in the Init and build a dictionary
+	if bf.SNETidToStructName == nil {
+		return errors.New("use SetSNetIDToNameFromGeoHDF() to set SNETidToStructName property in BFile before ammending elevations")
+	}
+	targetSNetID := bf.SNETidToStructName[structureName]
+	for _, v := range bf.BfileBlocks {
+		Breach, ok := v.(*BreachData)
+		if ok {
+			strucID := Breach.SNetID
+			if strucID == targetSNetID {
+				err := Breach.UpdateFloat(newFailureElevation)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+
+	}
+	//if we made it through the loop without finding a structure, it's not there.
+	return fmt.Errorf("structure name, %v, did not exist in bFile", structureName)
+}
+
+// Write writes bFile to byte array
+func (bf Bfile) Write() ([]byte, error) {
+	//for each row in th file
+	//@TODO: using a byte slice to compose a large string is not efficient.  Use a strings.Builder or a bytes.Buffer
+	b := make([]byte, 0)
+	for _, block := range bf.BfileBlocks {
+		blockBytes, err := block.ToBytes()
+		if err != nil {
+			return b, err
+		}
+		//switch with a single case is bad form, but I'm gussing we will have more corner cases so I'm using the switch over an if statement
+		switch {
+		case strings.HasPrefix(block.Header(), TS_OUTFLOW_HEADER):
+			blockBytes = append(blockBytes, TS_OUTFLOW_SUFFIX...)
+		}
+		b = append(b, blockBytes...)
+	}
+	return b, nil
+}
+
+// Create a dictionary of SNET-ID to structure name from the Geometry HDF.
+func (bf *Bfile) SetSNetIDToNameFromGeoHDF(filePath string) error {
+	snetToNameDictionary, err := ReadSNetIDToNameFromGeoHDF(filePath)
+	if err != nil {
+		return err
+	}
+	bf.SNETidToStructName = snetToNameDictionary
+	return nil
+}

@@ -12,10 +12,10 @@ RUN yum -y update &&\
     yum -y install openssl-devel.x86_64
 
 #names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
-ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/HEC-RAS_631_Linux_EngineOnly.zip
-ARG RAS_FILE=HEC-RAS_631_Linux_EngineOnly.zip
-ARG RAS_BIN_DIR=HEC-RAS_631_Linux_EngineOnly/bin
-ARG RAS_LIB_DIR=HEC-RAS_631_Linux_EngineOnly/libs
+ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/HEC-RAS_641_Linux_EngineOnly.zip
+ARG RAS_FILE=HEC-RAS_641_Linux_EngineOnly.zip
+ARG RAS_BIN_DIR=HEC-RAS_641_Linux_EngineOnly/bin
+ARG RAS_LIB_DIR=HEC-RAS_641_Linux_EngineOnly/libs
 #download RAS and put the file in the right place. Give them permissions to execute
 RUN wget ${NEXUS_RAS_URL} &&\ 
     unzip ${RAS_FILE} &&\

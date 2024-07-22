@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"ras-runner/actions"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,11 +21,12 @@ import (
 )
 
 const (
-	MODEL_DIR    = "/sim/model"
-	MODEL_SCRIPT = "/ras/run-model.sh"
-	GEOM_PREPROC = "/ras/run-geom-preproc.sh"
-	RASTIMEPATH  = "Unsteady Time Series/Time"
-	AWSBUCKET    = "AWS_S3_BUCKET"
+	MODEL_DIR         = "/sim/model"
+	MODEL_SCRIPT      = "run-model.sh"
+	MODEL_SCRIPT_PATH = "/ras"
+	GEOM_PREPROC      = "run-geom-preproc.sh"
+	RASTIMEPATH       = "Unsteady Time Series/Time"
+	AWSBUCKET         = "AWS_S3_BUCKET"
 )
 
 func timePath(datapath string) string {
@@ -38,6 +40,10 @@ var event int
 var tolerance float64 = 0.000001
 
 func main() {
+	scriptPath := os.Getenv("RAS_SCRIPT_PATH")
+	if scriptPath == "" {
+		scriptPath = MODEL_SCRIPT_PATH
+	}
 	pm, err := cc.InitPluginManager()
 	if err != nil {
 		log.Fatalf("Unable to initialize the CC plugin manager: %s\n", err)
@@ -45,6 +51,18 @@ func main() {
 	for _, action := range pm.GetPayload().Actions {
 		fmt.Println(action.Name)
 		switch action.Type {
+		case "update-breach-bfile":
+			// Assumes bFile and fragility curve file  were copied local with the CopyLocal action.
+			err := actions.UpdateBfileAction(action, MODEL_DIR)
+			if err != nil {
+				log.Fatal(err)
+			}
+		case "update-outlet-ts-bfile":
+			// Assumes bFile and pxx.tmp.hdf file  were copied local with the CopyLocal action.
+			err := actions.UpdateOutletTSAction(action, MODEL_DIR)
+			if err != nil {
+				log.Fatal(err)
+			}
 		case "create-ras-tmp":
 			log.Printf("Ready to create temp for %s\n", action.Name)
 			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
@@ -161,8 +179,9 @@ func main() {
 			if gproc, ok := pm.GetPayload().Attributes["geom_preproc"]; ok {
 				runGeomPreproc := gproc.(string)
 				if strings.ToLower(runGeomPreproc) == "true" {
-					log.Println("Running geometry preprocessor")
-					cmdout, err := exec.Command(GEOM_PREPROC, MODEL_DIR, modelPrefix, geom).Output()
+					gppcmd := fmt.Sprintf("%s/%s", scriptPath, GEOM_PREPROC)
+					log.Printf("Running geometry preprocessor: %s %s %s %s\n", gppcmd, MODEL_DIR, modelPrefix, geom)
+					cmdout, err := exec.Command(gppcmd, MODEL_DIR, modelPrefix, geom).Output()
 					if err != nil {
 						log.Fatalf("Error running geometry preprocessor:%s\n", err)
 					}
@@ -173,7 +192,9 @@ func main() {
 			}
 
 			log.Printf("Running model %s\n", action.Name)
-			cmdout, err := exec.Command(MODEL_SCRIPT, MODEL_DIR, modelPrefix, geom, plan).CombinedOutput()
+			simcmd := fmt.Sprintf("%s/%s", scriptPath, MODEL_SCRIPT)
+			log.Printf("Running model script: %s %s %s %s %s\n", simcmd, MODEL_DIR, modelPrefix, geom, plan)
+			cmdout, err := exec.Command(simcmd, MODEL_DIR, modelPrefix, geom, plan).CombinedOutput()
 			// grab any log information and write to output location before dealing with any errors
 			out.Write([]byte("---------- RAS Model Output --------------"))
 			_, err = out.Write(cmdout)

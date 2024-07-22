@@ -1,49 +1,39 @@
-FROM rockylinux:8
-
-ARG RAS_FILE=RAS_v610_Linux_test.zip
-ARG RAS_UNZIP_DIR=RAS_v610_Linux_test/Ras_v61/Release
-ARG RAS_LIB_DIR=RAS_v610_Linux_test/libs
-
-RUN yum -y update &&\ 
-    yum -y install git &&\
-    yum -y install wget &&\
-    yum -y install unzip &&\
-    yum -y install gcc &&\
-    yum -y install gcc-c++ &&\
-    yum -y install make &&\
-    yum -y install libcurl-devel.x86_64 &&\
-    yum -y install openssl-devel.x86_64 &&\
-    mkdir -p /src/ras-runner &&\
-    mkdir  /ras
-    
-
-COPY ${RAS_FILE} /
-COPY hdf5-1.14.1-2.tar.gz /
-COPY go.mod main.go /src/ras-runner
+FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:0.90
 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
 ENV PATH=/go/bin:$PATH
+ENV LD_LIBRARY_PATH=/hdf/lib
 ENV CGO_LDFLAGS="-L/hdf/lib"
 ENV CGO_CFLAGS="-I/hdf/include"
-ENV LD_LIBRARY_PATH=/hdf/lib
 
-RUN unzip ${RAS_FILE} &&\
-    mv /${RAS_LIB_DIR} /ras/libs &&\
-    mv /${RAS_UNZIP_DIR} /ras/bin &&\
+#names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
+ARG RAS_DEPLOYMENT=EngineOnly
+ARG RAS_VERSION=HEC-RAS_631_Linux
+ARG RAS_ARCHIVE=${RAS_VERSION}_${RAS_DEPLOYMENT}.zip
+ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/${RAS_ARCHIVE}
+
+#download RAS and put the file in the right place. Give them permissions to execute
+RUN wget ${NEXUS_RAS_URL} &&\ 
+    unzip ${RAS_ARCHIVE} &&\
+    mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras/libs &&\
+    mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras/bin &&\
     chmod -R +x /ras/* &&\
-    wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
-    tar -xvzf /go1.18.1.linux-amd64.tar.gz -C / &&\
-    mkdir /hdfsrc &&\
-    tar -xvzf hdf5-1.14.1-2.tar.gz --directory /hdfsrc --strip 2 &&\ 
-    cd /hdfsrc &&\
-    ./configure --prefix=/hdf --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
-    make &&\
-    make install &&\
-    cd /src/ras-runner &&\
-    go mod tidy &&\
-    go build
+    wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz -P / &&\
+    tar -xvzf go1.21.5.linux-amd64.tar.gz -C / &&\
+    mkdir -p /sim/model
 
+#download test data.
+#ARG NEXUS_TEST_DATA="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/BaldEagleDamBrk.g03.hdf"
+#RUN wget ${NEXUS_TEST_DATA}
+
+#ARG KANAWHA_TEST_DATA="https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/test-data/cc-ras-runner/kanawha_test_data.zip"
+#ARG KANAWHA_TEST_DATA_FILE="kanawha_test_data.zip"
+#RUN wget ${KANAWHA_TEST_DATA} &&\
+#    unzip ${KANAWHA_TEST_DATA_FILE}
+
+#Should/could condense this container into fewer layers. It was originally broken out to better understand what Randy was
+#doing before I messed with it -bbb
 
 
 
