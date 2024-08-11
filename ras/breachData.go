@@ -119,7 +119,7 @@ func SplitIntoBreachDataArray(rows [][]string) ([]BfileBlock, error) {
 		return breachdatas, err
 	}
 
-	structureFirstRowIndex := 1
+	structureFirstRowIndex := 1 //0 //1
 
 	for i := 0; i < numBreachingStructures; i++ {
 
@@ -217,7 +217,7 @@ func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) (int, e
 	}
 
 	//additional rows from progression/owncutting
-	rowCount += 1 //for the count of coordinates
+	//rowCount += 1 //for the count of coordinates
 	additionalRows, err := additionalRowsFromStoredOrdinates(rows, ProgOrdNumIndex)
 	if err != nil {
 		return 0, err
@@ -235,7 +235,7 @@ func numRowsForStructureInBreachData(rows [][]string, firstRowIndex int) (int, e
 		rowCount += additionalRows
 	}
 
-	return rowCount, nil
+	return rowCount + 1, nil //plus 1 for the first row.
 }
 
 // Checks that We're not a header and not white space

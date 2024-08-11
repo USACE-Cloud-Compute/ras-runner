@@ -13,7 +13,7 @@ type OutletTS struct {
 	TimeSeries []FlowData
 }
 type FlowData struct {
-	Index int
+	Index float32
 	Flow  float32
 }
 
@@ -53,7 +53,8 @@ func parseRowString(rowString string) ([]FlowData, error) {
 	flowDataCount := values / 2
 	result := make([]FlowData, flowDataCount)
 	for i := 0; i < flowDataCount; i++ {
-		index, err := strconv.Atoi(strings.TrimLeft(rowString[0+i*valueLength*2:valueLength+i*valueLength*2], " "))
+		index, err := strconv.ParseFloat(strings.TrimLeft(rowString[0+i*valueLength*2:valueLength+i*valueLength*2], " "), 32)
+		index32 := float32(index)
 		if err != nil {
 			return []FlowData{}, errors.New("could not parse index")
 		}
@@ -63,7 +64,7 @@ func parseRowString(rowString string) ([]FlowData, error) {
 			return []FlowData{}, errors.New("could not parse flow")
 		}
 		result[i] = FlowData{
-			Index: index,
+			Index: index32,
 			Flow:  flow32,
 		}
 	}
@@ -99,7 +100,7 @@ func (ots *OutletTS) ToBytes() ([]byte, error) {
 				result = append(result, "\n"...) //zero based will return on the 6th element (after the 5th) before writing the 6th
 			}
 		}
-		result = append(result, fmt.Sprintf("%*d%s", 8, fd.Index, convertFloatToBfileCellValue(float64(fd.Flow)))...) //
+		result = append(result, fmt.Sprintf("%s%s", convertFloatToBfileCellValue(float64(fd.Index)), convertFloatToBfileCellValue(float64(fd.Flow)))...) //
 	}
 	result = append(result, "\n"...)
 	return result, nil
