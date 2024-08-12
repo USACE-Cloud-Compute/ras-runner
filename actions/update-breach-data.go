@@ -51,7 +51,8 @@ func UpdateBfileAction(action cc.Action, modelDir string) error {
 	for _, fclr := range fcResult.Results {
 		err = bf.AmmendBreachElevations(fclr.Name, fclr.FailureElevation)
 		if err != nil {
-			return err
+			//return err
+			log.Print(err.Error())
 		}
 	}
 	resultBytes, err := bf.Write()

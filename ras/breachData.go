@@ -27,10 +27,11 @@ func (bd *BreachData) UpdateFloatArray(values []float32) error {
 }
 func (bd *BreachData) ToBytes() ([]byte, error) {
 	bytes := make([]byte, 0)
-	for i := 0; i < bd.NumRows-1; i++ {
-		row := fmt.Sprintf("%v\n", strings.Join(bd.BreachDataRows[i], ""))
+	for _, rowarray := range bd.BreachDataRows {
+		row := fmt.Sprintf("%v\n", strings.Join(rowarray, ""))
 		bytes = append(bytes, row...)
 	}
+
 	return bytes, nil
 }
 func InitBreachData(rows []string) ([]BfileBlock, error) {

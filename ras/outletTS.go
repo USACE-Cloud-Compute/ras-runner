@@ -102,6 +102,6 @@ func (ots *OutletTS) ToBytes() ([]byte, error) {
 		}
 		result = append(result, fmt.Sprintf("%s%s", convertFloatToBfileCellValue(float64(fd.Index)), convertFloatToBfileCellValue(float64(fd.Flow)))...) //
 	}
-	result = append(result, "\n"...)
+	//result = append(result, "\n"...)
 	return result, nil
 }
