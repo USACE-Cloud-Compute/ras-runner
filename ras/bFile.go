@@ -15,7 +15,7 @@ const CELL_SIZE_ERROR string = "the row was not able to be divided evenly by the
 const BREACH_DATA_HEADER string = "Breach Data"
 const TS_OUTFLOW_HEADER string = "Outlet TS - "
 
-var TS_OUTFLOW_SUFFIX []byte = []byte("\n 3.4E+38")
+var TS_OUTFLOW_SUFFIX []byte = []byte("\n 3.4E+38\n")
 
 // Parsing of these files is guided by the investigation here: https://www.hec.usace.army.mil/confluence/display/FFRD/Deciphering+Breach+Data+in+Intermediate+Files
 // nomenclature used in comments, as well as method and variable names is done to reflect the language on the above page.
