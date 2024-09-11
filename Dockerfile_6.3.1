@@ -1,59 +1,39 @@
 #Set up the environment to build the cc-ras-runner plugin
-FROM rockylinux:8 as builder
-
-RUN yum -y update &&\ 
-    yum -y install git &&\
-    yum -y install wget &&\
-    yum -y install unzip &&\
-    yum -y install gcc &&\
-    yum -y install gcc-c++ &&\
-    yum -y install make &&\
-    yum -y install libcurl-devel.x86_64 &&\
-    yum -y install openssl-devel.x86_64
+FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:0.90 as builder
 
 #names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
-ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/HEC-RAS_631_Linux_EngineOnly.zip
-ARG RAS_FILE=HEC-RAS_631_Linux_EngineOnly.zip
-ARG RAS_BIN_DIR=HEC-RAS_631_Linux_EngineOnly/bin
-ARG RAS_LIB_DIR=HEC-RAS_631_Linux_EngineOnly/libs
-#download RAS and put the file in the right place. Give them permissions to execute
-RUN wget ${NEXUS_RAS_URL} &&\ 
-    unzip ${RAS_FILE} &&\
-    mkdir /ras &&\
-    mv /${RAS_LIB_DIR} /ras/libs &&\
-    mv /${RAS_BIN_DIR} /ras/bin &&\
-    chmod -R +x /ras/* 
+ARG RAS_DEPLOYMENT=EngineOnly
+ARG RAS_VERSION=HEC-RAS_631_Linux
+ARG RAS_ARCHIVE=${RAS_VERSION}_${RAS_DEPLOYMENT}.zip
+ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/${RAS_ARCHIVE}
 
-#set up Go
-RUN wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
-    tar -xvzf go1.18.1.linux-amd64.tar.gz -C / 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
 ENV PATH=/go/bin:$PATH
-
-#set up HDF, AK commmented rasmapperlib is using 1.12. may cause issues.  
-ARG HDF_FILE=hdf5-1.14.3.tar.gz 
-ARG HDF_NEXUS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/hdf/hdf5-1.14.3.tar.gz
 ENV CGO_LDFLAGS="-L/hdf/lib"
 ENV CGO_CFLAGS="-I/hdf/include"
 ENV LD_LIBRARY_PATH=/hdf/lib
 
-RUN wget ${HDF_NEXUS_URL} &&\
-    mkdir /hdfsrc &&\
-    tar -xvzf ${HDF_FILE} --directory /hdfsrc --strip 2 &&\ 
-    cd /hdfsrc &&\
-    ./configure --prefix=/hdf --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
-    make &&\
-    make install
 
-#Copy src code into docker container
-RUN mkdir -p src/ras-runner
+RUN wget ${NEXUS_RAS_URL} &&\ 
+    unzip ${RAS_ARCHIVE} &&\
+    mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras/libs &&\
+    mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras/bin &&\
+    chmod -R +x /ras/* &&\ 
+    wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
+    tar -xvzf go1.18.1.linux-amd64.tar.gz -C / &&\
+    mkdir -p src/ras-runner 
+
 COPY ./ /src/ras-runner
+
+RUN mv /src/ras-runner/runScripts/${RAS_VERSION}/* /src/ras-runner &&\
+    cd /src/ras-runner 
+
 RUN cd /src/ras-runner &&\
     go mod tidy &&\
     go build
 
-#Set up the production environment
+
 FROM rockylinux:8 as prod
 
 ENV PATH=/hdf/bin:/ras/bin:/ras:$PATH
@@ -61,15 +41,15 @@ ENV LD_LIBRARY_PATH=/hdf/lib
 
 RUN mkdir -p /sim/model
 
-#copies ras binaries 
 COPY --from=builder /ras /ras
-#copies the ras runner binaries
-COPY --from=builder /src/ras-runner/ras-runner /ras/ras-runner
-#copies hdf binaries
+COPY --from=builder /src/ras-runner /ras/ras-runner
 COPY --from=builder /hdf /hdf
 
-#copies the scripts from the repo. 
-COPY run-model.sh /ras/run-model.sh
-COPY run-geom-preproc.sh /ras/run-geom-preproc.sh
+RUN cd /ras/ras-runner &&\
+    ls &&\
+    mv /ras/ras-runner/run-model.sh /ras/run-model.sh &&\
+    mv /ras/ras-runner/run-geom-preproc.sh /ras/run-geom-preproc.sh &&\
+    chmod +x /ras/run-model.sh &&\
+    chmod +x /ras/run-geom-preproc.sh
 
 CMD ["/ras/ras-runner"]

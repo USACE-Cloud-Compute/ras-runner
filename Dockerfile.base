@@ -1,0 +1,25 @@
+FROM rockylinux:8
+
+RUN yum -y update &&\ 
+    yum -y install git &&\
+    yum -y install wget &&\
+    yum -y install unzip &&\
+    yum -y install gcc &&\
+    yum -y install gcc-c++ &&\
+    yum -y install make &&\
+    yum -y install libcurl-devel.x86_64 &&\
+    yum -y install openssl-devel.x86_64 &&\
+    mkdir  /ras
+
+#set up HDF, AK commmented rasmapperlib is using 1.12. may cause issues.  
+ARG HDF_FILE=hdf5-1.14.3.tar.gz 
+ARG HDF_NEXUS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/hdf/hdf5-1.14.3.tar.gz
+ENV LD_LIBRARY_PATH=/hdf/lib
+
+RUN wget ${HDF_NEXUS_URL} &&\
+    mkdir /hdfsrc &&\
+    tar -xvzf ${HDF_FILE} --directory /hdfsrc --strip 2 &&\ 
+    cd /hdfsrc &&\
+    ./configure --prefix=/hdf --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
+    make &&\
+    make install
