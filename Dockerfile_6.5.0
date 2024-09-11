@@ -20,7 +20,7 @@ RUN wget ${NEXUS_RAS_URL} &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras/libs &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras/bin &&\
     chmod -R +x /ras/* &&\ 
-    wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
+    wget https://go.dev/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
     tar -xvzf go1.18.1.linux-amd64.tar.gz -C / &&\
     mkdir -p src/ras-runner 
 
@@ -41,15 +41,18 @@ ENV LD_LIBRARY_PATH=/hdf/lib
 
 RUN mkdir -p /sim/model
 
+#RAS Binaries
 COPY --from=builder /ras /ras
-COPY --from=builder /src/ras-runner /ras/ras-runner
+#cc-ras-runner binary
+COPY --from=builder /src/ras-runner/ras-runner /ras/ras-runner
+#hdf binaries
 COPY --from=builder /hdf /hdf
+#geom preproc script
+COPY --from=builder /src/ras-runner/run-geom-preproc.sh /ras/
+#model run script
+COPY --from=builder /src/ras-runner/run-model.sh /ras/
 
-RUN cd /ras/ras-runner &&\
-    ls &&\
-    mv /ras/ras-runner/run-model.sh /ras/run-model.sh &&\
-    mv /ras/ras-runner/run-geom-preproc.sh /ras/run-geom-preproc.sh &&\
-    chmod +x /ras/run-model.sh &&\
+RUN chmod +x /ras/run-model.sh &&\
     chmod +x /ras/run-geom-preproc.sh
 
 CMD ["/ras/ras-runner"]

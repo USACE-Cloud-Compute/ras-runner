@@ -26,12 +26,11 @@ RUN wget ${NEXUS_RAS_URL} &&\
 
 COPY ./ /src/ras-runner
 
-RUN mv /src/ras-runner/runScripts/${RAS_VERSION}/* /src/ras-runner &&\
-    cd /src/ras-runner 
+RUN mv /src/ras-runner/runScripts/${RAS_VERSION}/* /src/ras-runner 
 
 RUN cd /src/ras-runner &&\
     go mod tidy &&\
-    go build
+    go build 
 
 
 FROM rockylinux:8 as prod
@@ -41,15 +40,18 @@ ENV LD_LIBRARY_PATH=/hdf/lib
 
 RUN mkdir -p /sim/model
 
+#RAS Binaries
 COPY --from=builder /ras /ras
-COPY --from=builder /src/ras-runner /ras/ras-runner
+#cc-ras-runner binary
+COPY --from=builder /src/ras-runner/ras-runner /ras/ras-runner
+#hdf binaries
 COPY --from=builder /hdf /hdf
+#geom preproc script
+COPY --from=builder /src/ras-runner/run-geom-preproc.sh /ras/
+#model run script
+COPY --from=builder /src/ras-runner/run-model.sh /ras/
 
-RUN cd /ras/ras-runner &&\
-    ls &&\
-    mv /ras/ras-runner/run-model.sh /ras/run-model.sh &&\
-    mv /ras/ras-runner/run-geom-preproc.sh /ras/run-geom-preproc.sh &&\
-    chmod +x /ras/run-model.sh &&\
+RUN chmod +x /ras/run-model.sh &&\
     chmod +x /ras/run-geom-preproc.sh
 
 CMD ["/ras/ras-runner"]
