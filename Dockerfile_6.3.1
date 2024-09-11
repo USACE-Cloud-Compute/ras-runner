@@ -20,7 +20,7 @@ RUN wget ${NEXUS_RAS_URL} &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras/libs &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras/bin &&\
     chmod -R +x /ras/* &&\ 
-    wget https://golang.org/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
+    wget https://go.dev/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
     tar -xvzf go1.18.1.linux-amd64.tar.gz -C / &&\
     mkdir -p src/ras-runner 
 
@@ -32,7 +32,6 @@ RUN mv /src/ras-runner/runScripts/${RAS_VERSION}/* /src/ras-runner &&\
 RUN cd /src/ras-runner &&\
     go mod tidy &&\
     go build
-
 
 FROM rockylinux:8 as prod
 
