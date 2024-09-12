@@ -55,4 +55,4 @@ COPY --from=builder /src/ras-runner/run-model.sh /ras/
 RUN chmod +x /ras/run-model.sh &&\
     chmod +x /ras/run-geom-preproc.sh
 
-CMD ["/ras/ras-runner/ras-runner"]
+CMD ["/ras/ras-runner"]
