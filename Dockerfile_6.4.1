@@ -1,5 +1,6 @@
 #Set up the environment to build the cc-ras-runner plugin
-FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:0.90 as builder
+#FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:0.90 as builder
+FROM ras6-linux-base:0.90 as builder
 
 #names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
 ARG RAS_DEPLOYMENT=EngineOnly
@@ -52,4 +53,4 @@ RUN cd /ras/ras-runner &&\
     chmod +x /ras/run-model.sh &&\
     chmod +x /ras/run-geom-preproc.sh
 
-CMD ["/ras/ras-runner"]
+CMD ["/ras/ras-runner/ras-runner"]
