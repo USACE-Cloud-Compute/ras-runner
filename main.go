@@ -190,6 +190,15 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
+		case "post-outputs":
+			//this code is a short term fix to allow for more flexibility in this plugin to push things out to an output.
+			//ultimately with the updated sdk's this would change to leverage action level inputs or outputs (which currently do not exist in this version of the sdk...)
+			err := postOuptutFiles(pm)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		//case "post-all-changed-files"
+		//use the hashes from the pull from s3 on copy inputs, and check local files to see if there are any changes, and then push any changed files.
 		case "unsteady-simulation":
 			log.Printf("Running unsteady-simulation: %s", action.Description)
 			modelPrefix = pm.GetPayload().Attributes["modelPrefix"].(string)
@@ -669,7 +678,6 @@ func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapa
 	}
 	return nil
 }
-
 func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, readcol int) error {
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
@@ -799,7 +807,31 @@ func fetchInputSourceFiles(pm *cc.PluginManager) error {
 	}
 	return nil
 }
+func postOuptutFiles(pm *cc.PluginManager) error {
+	//this code is intended to be updated in the future to be more clean, for now it is structured to work without changing any previous actions, and is written with an out of date sdk to support multiple project.s
+	modelPrefix = pm.GetPayload().Attributes["modelPrefix"].(string)
+	plan := pm.GetPayload().Attributes["plan"].(string)
+	reservedfilename := fmt.Sprintf("%s.p%s.tmp.hdf", modelPrefix, plan)
+	for _, ds := range pm.GetOutputDataSources() {
+		err := func() error {
+			//check if the datasource name is reserved// rasoutput or pxx.tmp.hdf -> ignore these two.
+			if ds.Name == "rasoutput" {
+				return nil
+			}
 
+			if ds.Name == reservedfilename {
+				return nil
+			}
+			//get the local file from the datasource name.
+			return pm.CopyToRemote(fmt.Sprintf("%s/%s", MODEL_DIR, ds.Name), ds, 0)
+		}()
+		if err != nil {
+			log.Printf("Error fetching %s", ds.Paths[0])
+			return err
+		}
+	}
+	return nil
+}
 func saveResults(pm *cc.PluginManager, rasplan string, raslog *strings.Builder) error {
 	//write plan results
 	file := fmt.Sprintf("%s.p%s.tmp.hdf", modelPrefix, rasplan)
