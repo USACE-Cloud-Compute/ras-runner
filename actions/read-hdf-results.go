@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/usace/cc-go-sdk"
 	"github.com/usace/hdf5utils"
@@ -20,23 +21,19 @@ type SimulationMaxResult struct {
 }
 
 func (bclsm SimulationMaxResult) ToBytes() []byte {
-	builder := []byte{}
 
-	rowString := "Event ID"
-	for _, name := range bclsm.DataPaths {
-		rowString = fmt.Sprintf("%s,%s", rowString, name)
-	}
-	rowString += "\n"
-	builder = append(builder, []byte(rowString)...)
+	builder := strings.Builder{}
+	header := fmt.Sprintf("Event ID, %v\n", strings.Join(bclsm.DataPaths, ", "))
+	builder.WriteString(header)
 	for _, row := range bclsm.Rows {
-		rowString = string(row.EventId)
+		builder.WriteString(string(row.EventId))
 		for _, value := range row.Values {
-			rowString = fmt.Sprintf("%s,%f", rowString, value)
+			builder.WriteString(fmt.Sprintf(",%f", value))
 		}
-		rowString += "\n"
-		builder = append(builder, []byte(rowString)...)
+		builder.WriteString("\n")
 	}
-	return builder
+
+	return []byte(builder.String())
 }
 
 const BCLINE_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions/"
