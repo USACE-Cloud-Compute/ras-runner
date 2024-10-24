@@ -190,6 +190,16 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
+		case "bcline-peak-outputs":
+			err = actions.ReadBCLinePeak(action, MODEL_DIR)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		case "refline-peak-outputs":
+			err = actions.ReadRefLinePeak(action, MODEL_DIR)
+			if err != nil {
+				log.Fatalln(err)
+			}
 		case "post-outputs":
 			//this code is a short term fix to allow for more flexibility in this plugin to push things out to an output.
 			//ultimately with the updated sdk's this would change to leverage action level inputs or outputs (which currently do not exist in this version of the sdk...)
@@ -235,8 +245,12 @@ func main() {
 			if err != nil {
 				log.Fatalf("Error running ras model:%s\n", err)
 			}
+		default:
+
+			log.Fatalln(action.Name + " not found")
 
 		}
+
 	}
 	log.Println("Finished")
 }
