@@ -3,7 +3,6 @@ package actions
 import (
 	"fmt"
 	"reflect"
-	"slices"
 	"strings"
 
 	"github.com/usace/cc-go-sdk"
@@ -90,8 +89,13 @@ func ReadBCLinePeak(action cc.Action, modelDir string) error {
 			defer ds.Close()
 			column := []float32{}
 			ds.ReadColumn(col, column)
-			maxVal := slices.Max(column)
-			eventRow[idx] = maxVal
+			var mv float32 = 0.0
+			for _, v := range column {
+				if mv <= v {
+					mv = v
+				}
+			}
+			eventRow[idx] = mv
 		}
 		bcEventRow := EventMaxResult{
 			EventId:   event,
@@ -193,8 +197,13 @@ func ReadRefLinePeak(action cc.Action, modelDir string) error {
 		column := []float32{}
 		for idx := range dataPaths {
 			destVals.ReadColumn(idx, column)
-			maxVal := slices.Max(column)
-			eventRow[idx] = maxVal
+			var mv float32 = 0.0
+			for _, v := range column {
+				if mv <= v {
+					mv = v
+				}
+			}
+			eventRow[idx] = mv
 		}
 		bcEventRow := EventMaxResult{
 			EventId:   event,
