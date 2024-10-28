@@ -2,12 +2,14 @@ package actions
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
 	"strings"
 
 	"github.com/usace/cc-go-sdk"
+	"github.com/usace/go-hdf5"
 	"github.com/usace/hdf5utils"
 )
 
@@ -40,7 +42,7 @@ func (bclsm SimulationMaxResult) ToBytes() []byte {
 const BCLINE_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions/"
 
 // ReadBCLinePeakStage reads the peak stage for each bc line element provided.
-func ReadBCLinePeak(action cc.Action, modelDir string) error {
+func ReadBCLinePeak(action cc.Action) error {
 	//get the plugin manager
 	pm, err := cc.InitPluginManager()
 	if err != nil {
@@ -149,7 +151,7 @@ func ReadBCLinePeak(action cc.Action, modelDir string) error {
 const REFLINE_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/"
 
 // ReadRefLinePeakStage reads the peak stage for each bc line element provided.
-func ReadRefLinePeak(action cc.Action, modelDir string) error {
+func ReadRefLinePeak(action cc.Action) error {
 	//get the plugin manager
 	pm, err := cc.InitPluginManager()
 	if err != nil {
@@ -254,7 +256,7 @@ func ReadRefLinePeak(action cc.Action, modelDir string) error {
 			return nil
 		}()
 		if err != nil {
-			continue
+			log.Println(err)
 		}
 
 	}
@@ -290,7 +292,7 @@ func (bclsm SimulationMetadata) ToBytes() []byte {
 	header := fmt.Sprintf("Event ID, %v\n", strings.Join(bclsm.DataPaths, ", "))
 	builder.WriteString(header)
 	for _, row := range bclsm.Rows {
-		builder.WriteString(string(row.EventId))
+		builder.WriteString(fmt.Sprintf("%v", row.EventId))
 		for _, value := range row.Values {
 			builder.WriteString(fmt.Sprintf(",%v", value))
 		}
@@ -300,11 +302,10 @@ func (bclsm SimulationMetadata) ToBytes() []byte {
 	return []byte(builder.String())
 }
 
-/*
 const SUMMARY_PATH = "/Results/Unsteady/Summary"
-const TWOD_FLOW_AREA_PATH = "/Results/Unsteady/Output/Output Blocks/Summary Output/2D Flow Areas/"
+const TWOD_FLOW_AREA_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Summary Output/2D Flow Areas/"
 
-func ReadSimulationMetadata(action cc.Action, modelDir string) error {
+func ReadSimulationMetadata(action cc.Action) error {
 	//get the plugin manager
 	pm, err := cc.InitPluginManager()
 	if err != nil {
@@ -315,10 +316,9 @@ func ReadSimulationMetadata(action cc.Action, modelDir string) error {
 	dataSourceName := action.Parameters.GetStringOrFail("simulationDataSource")
 	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
 	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
-	twoDStorageAreaNames, err := action.Parameters.GetStringSlice("2d_flow_areas")
-	if err != nil {
-		return err
-	}
+	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
+	twoDStorageAreaNameString := action.Parameters.GetStringOrFail("flow_areas")
+	twoDStorageAreaNames := strings.Split(twoDStorageAreaNameString, ", ")
 	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
 	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
 	if err != nil {
@@ -328,70 +328,127 @@ func ReadSimulationMetadata(action cc.Action, modelDir string) error {
 	eventCount := endEventIndex - startEventIndex
 
 	dataPaths := []string{"Computation Time Total", "Maximum WSEL Error", "Solution", "Time Stamp Solution Went Unstable"}
+	twoDpaths := []string{"Cum Net Precip Inches", "Vol Accounting Error", "Vol Accounting Error Percentage", "Vol Accounting External Inflow", "Vol Accounting External Outflow", "Vol Acct. Inflow from Net Precip"}
 	for _, area := range twoDStorageAreaNames {
-		dataPaths = append(dataPaths, fmt.Sprintf("%v - %v", area, "Cumulative Net PRecip Inches"))
-		dataPaths = append(dataPaths, fmt.Sprintf("%v - %v", area, "Volume Accounting Error"))
-		dataPaths = append(dataPaths, fmt.Sprintf("%v - %v", area, "Volume Accounting Error Percentage"))
-		dataPaths = append(dataPaths, fmt.Sprintf("%v - %v", area, "Volume Accounting External Inflow"))
-		dataPaths = append(dataPaths, fmt.Sprintf("%v - %v", area, "Volume Accounting External Outflow"))
-		dataPaths = append(dataPaths, fmt.Sprintf("%v - %v", area, "Volume Accounting Inflow from Net Precipitation"))
+		for _, variable := range twoDpaths {
+			dataPaths = append(dataPaths, fmt.Sprintf("%v - %v", area, variable))
+		}
 	}
-
-	simulation := SimulationMaxResult{
+	simulation := SimulationMetadata{
 		DataPaths: dataPaths,
-		Rows:      make([]EventMaxResult, eventCount),
+		Rows:      []EventMetadata{},
 	}
 	//crack open a hdf file and read the values for each specified datapath.
 	for event := startEventIndex; event <= endEventIndex; event++ {
-		//read the names from the Names Table.
+		//read the HDF file.
 		hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
-		f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+		values := make([]any, 6*len(twoDStorageAreaNames)+4)
+		err = func() error {
+
+			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			//read the Simulation group
+			simulationGroup, err := f.OpenGroup(SUMMARY_PATH)
+			if err != nil {
+				return err
+			}
+			defer simulationGroup.Close()
+			//read the attributes from the simulation group:
+			compTime, err := stringAttribute(dataPaths[0], simulationGroup)
+			if err != nil {
+				return err
+			}
+			values[0] = compTime
+			maxWSELError, err := floatAttribute(dataPaths[1], simulationGroup)
+			if err != nil {
+				return err
+			}
+			values[1] = maxWSELError
+			solution, err := stringAttribute(dataPaths[2], simulationGroup)
+			if err != nil {
+				return err
+			}
+			values[2] = solution
+			timeUnstable, err := stringAttribute(dataPaths[3], simulationGroup)
+			if err != nil {
+				return err
+			}
+			values[3] = timeUnstable
+
+			for twodid, name := range twoDStorageAreaNames {
+				idx := (twodid * 6) + 4
+				twodGroup, err := f.OpenGroup(TWOD_FLOW_AREA_PATH + name)
+				if err != nil {
+					return err
+				}
+				defer twodGroup.Close()
+				for i, attrName := range twoDpaths {
+					index := idx + i
+					val, err := floatAttribute(attrName, twodGroup)
+					if err != nil {
+						return err
+					}
+					values[index] = val
+				}
+			}
+			bcEventRow := EventMetadata{
+				EventId:   event,
+				DataPaths: &simulation.DataPaths,
+				Values:    values,
+			}
+			simulation.Rows = append(simulation.Rows, bcEventRow)
+			return nil
+		}()
 		if err != nil {
 			log.Println(hdfPath + " not found")
 			continue
 		}
-		var destVals *hdf5utils.HdfDataset
-		err = func() error {
-			destoptions := hdf5utils.HdfReadOptions{
-				Dtype:        reflect.Float32,
-				File:         f,
-				ReadOnCreate: true,
-			}
-			destVals, err = hdf5utils.NewHdfDataset(REFLINE_RESULT_PATH+dsName, destoptions)
-			if err != nil {
-				return err
-			}
-			defer destVals.Close()
-			return nil
-		}()
-		if err != nil {
-			return err
-		}
-		eventRow := make([]float32, len(dataPaths))
-		column := []float32{}
-		for idx := range dataPaths {
-			destVals.ReadColumn(idx, column)
-			var mv float32 = 0.0
-			for _, v := range column {
-				if mv <= v {
-					mv = v
-				}
-			}
-			eventRow[idx] = mv
-		}
-		bcEventRow := EventMaxResult{
-			EventId:   event,
-			DataPaths: &simulation.DataPaths,
-			Values:    eventRow,
-		}
-		simulation.Rows[startEventIndex-event] = bcEventRow
+
 	}
-	outputDataSource, err := pm.GetInputDataSource(outputDataSourceName)
+	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
 	if err != nil {
 		return err
 	}
 	b := simulation.ToBytes()
-	pm.PutFile(b, outputDataSource, 0)
+	reader := bytes.NewReader(b)
+
+	err = pm.FileWriter(reader, outputDataSource, 0)
+
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
 	return nil
 }
-*/
+func floatAttribute(name string, grp *hdf5.Group) (float32, error) {
+	if grp.AttributeExists(name) {
+		Attr, err := grp.OpenAttribute(name)
+		if err != nil {
+			return 0.0, err
+		}
+		defer Attr.Close()
+		var AttrData float32
+		//log.Println(Attr.Type().String())
+		Attr.Read(&AttrData, hdf5.T_IEEE_F32BE) //not sure if this is a string
+		//set value in the values array.
+		return AttrData, nil
+	}
+	return 0.0, errors.New("attribute named " + name + " does not exist")
+}
+func stringAttribute(name string, grp *hdf5.Group) (string, error) {
+	if grp.AttributeExists(name) {
+		Attr, err := grp.OpenAttribute(name)
+		if err != nil {
+			return "", err
+		}
+		defer Attr.Close()
+		var AttrData string
+		Attr.Read(&AttrData, hdf5.T_GO_STRING) //not sure if this is a string
+		//set value in the values array.
+		return AttrData, nil
+	}
+	return "", errors.New("attribute named " + name + " does not exist")
+}

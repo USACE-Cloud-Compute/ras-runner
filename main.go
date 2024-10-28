@@ -191,12 +191,17 @@ func main() {
 				log.Fatalln(err)
 			}
 		case "bcline-peak-outputs":
-			err = actions.ReadBCLinePeak(action, MODEL_DIR)
+			err = actions.ReadBCLinePeak(action)
 			if err != nil {
 				log.Fatalln(err)
 			}
 		case "refline-peak-outputs":
-			err = actions.ReadRefLinePeak(action, MODEL_DIR)
+			err = actions.ReadRefLinePeak(action)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		case "simulation-attribute-metadata":
+			err = actions.ReadSimulationMetadata(action)
 			if err != nil {
 				log.Fatalln(err)
 			}
