@@ -47,3 +47,22 @@ func Test_Read_HDF_Attributes(t *testing.T) {
 	}
 	actions.ReadSimulationMetadata(action)
 }
+func Test_Read_HDF_StructureVariables(t *testing.T) {
+	// set the manifest id environment variable.
+	//os.Setenv("CC_MANIFEST_ID", "99041f15-8274-4782-b67c-bf6216e9fd95")
+	action := cc.Action{
+		Name:        "structure-variables-peak-output",
+		Type:        "structure-variables-peak-output", //ptr[string]("copy-inputs"),
+		Description: "structure-variables-peak-output",
+		Parameters: map[string]any{
+			"structurevariablesDataSource": "Duwamish_17110013.p01.hdf",
+			"start_event_index":            1,
+			"end_event_index":              2,
+			"twod_flow_area":               "Perimeter 1",
+			"twod_hyd_cons":                "GS_200thStreet, GS_277thStreet, GS_Auburn, GS_BigSoos, GS_BlackDiamond, GS_GolfCourse, GS_HowardTailwat, GS_MarginalWay, GS_MeekerStreet, GS_MillAtEarthwo, GS_MillAtOrilla, GS_Newaukum, GS_Purification, GS_SpringbrookOr, GS_Tukwila, HH_DamEmbankment, Headworks_LowHd, PumpSta_BlackRvr, YoungsLakeOutDam",
+			"output_file_dataSource":       "2dConnection_maxes.csv",
+			"bucket_prefix":                "FFRD",
+		},
+	}
+	actions.ReadStructureVariablesPeak(action)
+}

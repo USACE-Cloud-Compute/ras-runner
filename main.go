@@ -205,6 +205,11 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
+		case "structure-variables-peak-output":
+			err = actions.ReadStructureVariablesPeak(action)
+			if err != nil {
+				log.Fatalln(err)
+			}
 		case "post-outputs":
 			//this code is a short term fix to allow for more flexibility in this plugin to push things out to an output.
 			//ultimately with the updated sdk's this would change to leverage action level inputs or outputs (which currently do not exist in this version of the sdk...)

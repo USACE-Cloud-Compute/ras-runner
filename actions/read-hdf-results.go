@@ -325,8 +325,6 @@ func ReadSimulationMetadata(action cc.Action) error {
 		return err
 	}
 
-	eventCount := endEventIndex - startEventIndex
-
 	dataPaths := []string{"Computation Time Total", "Maximum WSEL Error", "Solution", "Time Stamp Solution Went Unstable"}
 	twoDpaths := []string{"Cum Net Precip Inches", "Vol Accounting Error", "Vol Accounting Error Percentage", "Vol Accounting External Inflow", "Vol Accounting External Outflow", "Vol Acct. Inflow from Net Precip"}
 	for _, area := range twoDStorageAreaNames {
@@ -432,7 +430,7 @@ func floatAttribute(name string, grp *hdf5.Group) (float32, error) {
 		defer Attr.Close()
 		var AttrData float32
 		//log.Println(Attr.Type().String())
-		Attr.Read(&AttrData, hdf5.T_IEEE_F32BE) //not sure if this is a string
+		Attr.Read(&AttrData, hdf5.T_IEEE_F32LE) //not sure if this is a string
 		//set value in the values array.
 		return AttrData, nil
 	}
@@ -451,4 +449,119 @@ func stringAttribute(name string, grp *hdf5.Group) (string, error) {
 		return AttrData, nil
 	}
 	return "", errors.New("attribute named " + name + " does not exist")
+}
+
+const TWODSTORAGEAREA_STRUCTUREVARIABLES_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/"
+
+// ReadBCLinePeakStage reads the peak stage for each bc line element provided.
+func ReadStructureVariablesPeak(action cc.Action) error {
+	//get the plugin manager
+	pm, err := cc.InitPluginManager()
+	if err != nil {
+		return err
+	}
+
+	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
+	dataSourceName := action.Parameters.GetStringOrFail("structurevariablesDataSource")
+	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
+	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
+	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
+	twoDFlowarea := action.Parameters.GetStringOrFail("twod_flow_area")
+	dataPathString := action.Parameters.GetStringOrFail("twod_hyd_cons")
+	dataPaths := strings.Split(dataPathString, ", ")
+	if err != nil {
+		return err
+	}
+	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
+	if err != nil {
+		return err
+	}
+	header := make([]string, len(dataPaths)*3)
+	for idx, hydcon := range dataPaths {
+		header[idx*3] = hydcon + " - Total Flow"
+		header[(idx*3)+1] = hydcon + " - Stage HW"
+		header[(idx*3)+2] = hydcon + " - Stage TW"
+	}
+	//eventCount := endEventIndex - startEventIndex
+	simulation := SimulationMaxResult{
+		DataPaths: header,
+		Rows:      []EventMaxResult{},
+	}
+	//crack open a hdf file and read the values for each specified datapath.
+	//index := 0
+	rootPath := TWODSTORAGEAREA_STRUCTUREVARIABLES_RESULT_PATH + twoDFlowarea
+	for event := startEventIndex; event <= endEventIndex; event++ {
+		err = func() error {
+			hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
+			log.Println("searching for " + hdfPath)
+			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			options := hdf5utils.HdfReadOptions{
+				Dtype:        reflect.Float32,
+				ReadOnCreate: true,
+				File:         f,
+			}
+			eventRow := make([]float32, len(dataPaths)*3)
+			//0=Total Flow, 2=Stage HW, 3=Stage TW
+			cols := []int{0, 2, 3}
+			for idx, hydcon := range dataPaths {
+				err = func() error {
+					datapath := fmt.Sprintf("%s/2D Hyd Conn/%s/Structure Variables", rootPath, hydcon)
+					ds, err := hdf5utils.NewHdfDataset(datapath, options)
+					if err != nil {
+						log.Println(fmt.Sprintf("%v %v", hdfPath, hydcon))
+						return err
+					}
+					defer ds.Close()
+					column := []float32{}
+					for i, col := range cols {
+						ds.ReadColumn(col, &column)
+						var mv float32 = -901.0
+
+						for _, v := range column {
+							//fmt.Printf("%f\n", v)
+							if v >= mv {
+								mv = v
+							}
+						}
+						eventRow[(idx*3)+i] = mv
+					}
+
+					return nil
+				}()
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+			bcEventRow := EventMaxResult{
+				EventId:   event,
+				DataPaths: &simulation.DataPaths,
+				Values:    eventRow,
+			}
+			simulation.Rows = append(simulation.Rows, bcEventRow)
+			return nil
+		}()
+		if err != nil {
+			continue
+		}
+	}
+	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
+	if err != nil {
+		return err
+	}
+	b := simulation.ToBytes()
+	reader := bytes.NewReader(b)
+	//fmt.Println(string(b))
+	err = pm.FileWriter(reader, outputDataSource, 0)
+	//err = pm.PutFile(b, outputDataSource, 0)
+	if err != nil {
+		return err
+	}
+	return nil
+
 }
