@@ -205,7 +205,7 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
-		case "refline-min-outputs":
+		case "refpoint-min-outputs":
 			err = actions.ReadRefPointMinimum(action)
 			if err != nil {
 				log.Fatalln(err)
