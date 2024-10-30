@@ -200,6 +200,16 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
+		case "refpoint-peak-outputs":
+			err = actions.ReadRefPointPeak(action)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		case "refline-min-outputs":
+			err = actions.ReadRefPointMinimum(action)
+			if err != nil {
+				log.Fatalln(err)
+			}
 		case "simulation-attribute-metadata":
 			err = actions.ReadSimulationMetadata(action)
 			if err != nil {

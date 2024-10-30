@@ -66,3 +66,40 @@ func Test_Read_HDF_StructureVariables(t *testing.T) {
 	}
 	actions.ReadStructureVariablesPeak(action)
 }
+func Test_Read_HDF_EVENT_Data(t *testing.T) {
+	// set the manifest id environment variable.
+	//os.Setenv("CC_MANIFEST_ID", "99041f15-8274-4782-b67c-bf6216e9fd95")
+	action := cc.Action{
+		Name:        "structure-variables-peak-output",
+		Type:        "structure-variables-peak-output", //ptr[string]("copy-inputs"),
+		Description: "structure-variables-peak-output",
+		Parameters: map[string]any{
+			"refLineDataSource":      "Duwamish_17110013.p01.hdf",
+			"event_index":            1,
+			"names_string_length":    36,
+			"wsel_or_flow":           "flow",
+			"output_file_dataSource": "event_time_series",
+			"bucket_prefix":          "FFRD",
+		},
+	}
+	actions.ReadRefLineTimeSeries(action)
+}
+func Test_Read_HDF_RefPoint_Min_Data(t *testing.T) {
+	// set the manifest id environment variable.
+	//os.Setenv("CC_MANIFEST_ID", "99041f15-8274-4782-b67c-bf6216e9fd95")
+	action := cc.Action{
+		Name:        "a",
+		Type:        "a", //ptr[string]("copy-inputs"),
+		Description: "a",
+		Parameters: map[string]any{
+			"refPointDataSource":     "Duwamish_17110013.p01.hdf",
+			"start_event_index":      1,
+			"end_event_index":        2,
+			"names_string_length":    33,
+			"wsel_or_velocity":       "wsel",
+			"output_file_dataSource": "refpoint_min_wsel.csv",
+			"bucket_prefix":          "FFRD",
+		},
+	}
+	actions.ReadRefPointMinimum(action)
+}

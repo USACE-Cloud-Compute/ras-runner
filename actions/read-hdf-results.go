@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"reflect"
 	"strings"
 
@@ -105,7 +106,7 @@ func ReadBCLinePeak(action cc.Action) error {
 					defer ds.Close()
 					column := []float32{}
 					ds.ReadColumn(col, &column)
-					var mv float32 = -901.0
+					var mv float32 = math.SmallestNonzeroFloat32
 
 					for _, v := range column {
 						//fmt.Printf("%f\n", v)
@@ -239,9 +240,261 @@ func ReadRefLinePeak(action cc.Action) error {
 			column := []float32{}
 			for idx := range dataPaths {
 				destVals.ReadColumn(idx, &column)
-				var mv float32 = 0.0
+				var mv float32 = math.SmallestNonzeroFloat32
 				for _, v := range column {
 					if mv <= v {
+						mv = v
+					}
+				}
+				eventRow[idx] = mv
+			}
+			bcEventRow := EventMaxResult{
+				EventId:   event,
+				DataPaths: &simulation.DataPaths,
+				Values:    eventRow,
+			}
+			simulation.Rows = append(simulation.Rows, bcEventRow)
+			return nil
+		}()
+		if err != nil {
+			log.Println(err)
+		}
+
+	}
+	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
+	if err != nil {
+		return err
+	}
+	b := simulation.ToBytes()
+	reader := bytes.NewReader(b)
+
+	err = pm.FileWriter(reader, outputDataSource, 0)
+	//err = pm.PutFile(b, outputDataSource, 0)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	return nil
+}
+
+const REFPOINT_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/"
+
+// ReadRefLinePeakStage reads the peak stage for each bc line element provided.
+func ReadRefPointPeak(action cc.Action) error {
+	//get the plugin manager
+	pm, err := cc.InitPluginManager()
+	if err != nil {
+		return err
+	}
+
+	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
+	dataSourceName := action.Parameters.GetStringOrFail("refPointDataSource")
+	variableType := action.Parameters.GetStringOrFail("wsel_or_velocity")
+	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
+	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
+	dsetNameStringLen := action.Parameters.GetIntOrFail("names_string_length")
+	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
+	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
+	if err != nil {
+		return err
+	}
+	//for reflines we have Water Surface or Flow
+	dsName := "Water Surface"
+	if variableType == "velocity" {
+		dsName = "Velocity"
+	}
+
+	//eventCount := endEventIndex - startEventIndex
+
+	hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], startEventIndex)
+	f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+	if err != nil {
+		return err
+	}
+	namesDataSet, err := hdf5utils.NewHdfDataset(REFPOINT_RESULT_PATH+"Name", hdf5utils.HdfReadOptions{
+		Dtype:        reflect.String,
+		Strsizes:     hdf5utils.NewHdfStrSet(dsetNameStringLen),
+		File:         f,
+		ReadOnCreate: true,
+	})
+	if err != nil {
+		return err
+	}
+	defer namesDataSet.Close()
+	dataPaths := make([]string, namesDataSet.Rows())
+	for i := 0; i < namesDataSet.Rows(); i++ {
+		name := []string{}
+		err := namesDataSet.ReadRow(i, &name)
+		if err != nil {
+			return err
+		}
+		dataPaths[i] = name[0]
+	}
+
+	simulation := SimulationMaxResult{
+		DataPaths: dataPaths,
+		Rows:      []EventMaxResult{},
+	}
+	//crack open a hdf file and read the values for each specified datapath.
+	for event := startEventIndex; event <= endEventIndex; event++ {
+		//read the names from the Names Table.
+		err = func() error {
+			hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
+			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+			if err != nil {
+				log.Println(hdfPath + " not found")
+				return err
+			}
+			defer f.Close()
+			var destVals *hdf5utils.HdfDataset
+			err = func() error {
+				destoptions := hdf5utils.HdfReadOptions{
+					Dtype:        reflect.Float32,
+					File:         f,
+					ReadOnCreate: true,
+				}
+				destVals, err = hdf5utils.NewHdfDataset(REFLINE_RESULT_PATH+dsName, destoptions)
+				if err != nil {
+					return err
+				}
+				defer destVals.Close()
+				return nil
+			}()
+			if err != nil {
+				return err
+			}
+			eventRow := make([]float32, len(dataPaths))
+			column := []float32{}
+			for idx := range dataPaths {
+				destVals.ReadColumn(idx, &column)
+				var mv float32 = math.SmallestNonzeroFloat32
+				for _, v := range column {
+					if mv <= v {
+						mv = v
+					}
+				}
+				eventRow[idx] = mv
+			}
+			bcEventRow := EventMaxResult{
+				EventId:   event,
+				DataPaths: &simulation.DataPaths,
+				Values:    eventRow,
+			}
+			simulation.Rows = append(simulation.Rows, bcEventRow)
+			return nil
+		}()
+		if err != nil {
+			log.Println(err)
+		}
+
+	}
+	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
+	if err != nil {
+		return err
+	}
+	b := simulation.ToBytes()
+	reader := bytes.NewReader(b)
+
+	err = pm.FileWriter(reader, outputDataSource, 0)
+	//err = pm.PutFile(b, outputDataSource, 0)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	return nil
+}
+func ReadRefPointMinimum(action cc.Action) error {
+	//get the plugin manager
+	pm, err := cc.InitPluginManager()
+	if err != nil {
+		return err
+	}
+
+	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
+	dataSourceName := action.Parameters.GetStringOrFail("refPointDataSource")
+	variableType := action.Parameters.GetStringOrFail("wsel_or_velocity")
+	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
+	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
+	dsetNameStringLen := action.Parameters.GetIntOrFail("names_string_length")
+	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
+	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
+	if err != nil {
+		return err
+	}
+	//for reflines we have Water Surface or Flow
+	dsName := "Water Surface"
+	if variableType == "velocity" {
+		dsName = "Velocity"
+	}
+
+	//eventCount := endEventIndex - startEventIndex
+
+	hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], startEventIndex)
+	f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+	if err != nil {
+		return err
+	}
+	namesDataSet, err := hdf5utils.NewHdfDataset(REFPOINT_RESULT_PATH+"Name", hdf5utils.HdfReadOptions{
+		Dtype:        reflect.String,
+		Strsizes:     hdf5utils.NewHdfStrSet(dsetNameStringLen),
+		File:         f,
+		ReadOnCreate: true,
+	})
+	if err != nil {
+		return err
+	}
+	defer namesDataSet.Close()
+	dataPaths := make([]string, namesDataSet.Rows())
+	for i := 0; i < namesDataSet.Rows(); i++ {
+		name := []string{}
+		err := namesDataSet.ReadRow(i, &name)
+		if err != nil {
+			return err
+		}
+		dataPaths[i] = name[0]
+	}
+
+	simulation := SimulationMaxResult{
+		DataPaths: dataPaths,
+		Rows:      []EventMaxResult{},
+	}
+	//crack open a hdf file and read the values for each specified datapath.
+	for event := startEventIndex; event <= endEventIndex; event++ {
+		//read the names from the Names Table.
+		err = func() error {
+			hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
+			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+			if err != nil {
+				log.Println(hdfPath + " not found")
+				return err
+			}
+			defer f.Close()
+			var destVals *hdf5utils.HdfDataset
+			err = func() error {
+				destoptions := hdf5utils.HdfReadOptions{
+					Dtype:        reflect.Float32,
+					File:         f,
+					ReadOnCreate: true,
+				}
+				destVals, err = hdf5utils.NewHdfDataset(REFLINE_RESULT_PATH+dsName, destoptions)
+				if err != nil {
+					return err
+				}
+				defer destVals.Close()
+				return nil
+			}()
+			if err != nil {
+				return err
+			}
+			eventRow := make([]float32, len(dataPaths))
+			column := []float32{}
+			for idx := range dataPaths {
+				destVals.ReadColumn(idx, &column)
+				var mv float32 = math.MaxFloat32
+				for _, v := range column {
+					if mv >= v {
 						mv = v
 					}
 				}
@@ -564,4 +817,134 @@ func ReadStructureVariablesPeak(action cc.Action) error {
 	}
 	return nil
 
+}
+
+func ReadRefLineTimeSeries(action cc.Action) error {
+	//get the plugin manager
+	pm, err := cc.InitPluginManager()
+	if err != nil {
+		return err
+	}
+
+	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
+	dataSourceName := action.Parameters.GetStringOrFail("refLineDataSource")
+	variableType := action.Parameters.GetStringOrFail("wsel_or_flow")
+	EventIndex := action.Parameters.GetInt64OrDefault("event_index", 1)
+	dsetNameStringLen := action.Parameters.GetIntOrFail("names_string_length")
+	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
+	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
+	if err != nil {
+		return err
+	}
+	//for reflines we have Water Surface or Flow
+	dsName := "Water Surface"
+	if variableType == "flow" {
+		dsName = "Flow"
+	}
+
+	//eventCount := endEventIndex - startEventIndex
+
+	hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], EventIndex)
+	f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	namesDataSet, err := hdf5utils.NewHdfDataset(REFLINE_RESULT_PATH+"Name", hdf5utils.HdfReadOptions{
+		Dtype:        reflect.String,
+		Strsizes:     hdf5utils.NewHdfStrSet(dsetNameStringLen),
+		File:         f,
+		ReadOnCreate: true,
+	})
+	if err != nil {
+		return err
+	}
+	defer namesDataSet.Close()
+	dataPaths := make([]string, namesDataSet.Rows())
+	for i := 0; i < namesDataSet.Rows(); i++ {
+		name := []string{}
+		err := namesDataSet.ReadRow(i, &name)
+		if err != nil {
+			return err
+		}
+		dataPaths[i] = name[0]
+	}
+
+	result := EventTimeSeriesResult{
+		DataPaths: dataPaths,
+		Values:    [][]float32{},
+	}
+	//crack open a hdf file and read the values for each specified datapath.
+	//read the names from the Names Table.
+	err = func() error {
+
+		var destVals *hdf5utils.HdfDataset
+		err = func() error {
+			destoptions := hdf5utils.HdfReadOptions{
+				Dtype:        reflect.Float32,
+				File:         f,
+				ReadOnCreate: true,
+			}
+			destVals, err = hdf5utils.NewHdfDataset(REFLINE_RESULT_PATH+dsName, destoptions)
+			if err != nil {
+				return err
+			}
+			defer destVals.Close()
+			return nil
+		}()
+		if err != nil {
+			return err
+		}
+		data := make([][]float32, len(dataPaths))
+
+		for idx := range dataPaths {
+			column := []float32{}
+			destVals.ReadColumn(idx, &column)
+			data[idx] = column
+		}
+		result.Values = data
+		return nil
+	}()
+	if err != nil {
+		log.Println(err)
+	}
+
+	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
+	if err != nil {
+		return err
+	}
+	outputDataSource.Paths[0] = fmt.Sprintf("%v_event_%v.%v", outputDataSource.Paths[0], EventIndex, "csv")
+	b := result.ToBytes()
+	reader := bytes.NewReader(b)
+
+	err = pm.FileWriter(reader, outputDataSource, 0)
+	//err = pm.PutFile(b, outputDataSource, 0)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	return nil
+}
+
+type EventTimeSeriesResult struct {
+	EventId   int64
+	DataPaths []string
+	Values    [][]float32
+}
+
+func (etsr EventTimeSeriesResult) ToBytes() []byte {
+
+	builder := strings.Builder{}
+	header := fmt.Sprintf("TimeStep, %v\n", strings.Join(etsr.DataPaths, ", "))
+	builder.WriteString(header)
+
+	for j := range etsr.Values[0] {
+		builder.WriteString(fmt.Sprintf("%v", j))
+		for i := range etsr.Values {
+			builder.WriteString(fmt.Sprintf(",%f", etsr.Values[i][j]))
+		}
+		builder.WriteString("\n")
+	}
+	return []byte(builder.String())
 }
