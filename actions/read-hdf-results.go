@@ -354,7 +354,7 @@ func ReadRefPointPeak(action cc.Action) error {
 					File:         f,
 					ReadOnCreate: true,
 				}
-				destVals, err = hdf5utils.NewHdfDataset(REFLINE_RESULT_PATH+dsName, destoptions)
+				destVals, err = hdf5utils.NewHdfDataset(REFPOINT_RESULT_PATH+dsName, destoptions)
 				if err != nil {
 					return err
 				}
@@ -478,7 +478,7 @@ func ReadRefPointMinimum(action cc.Action) error {
 					File:         f,
 					ReadOnCreate: true,
 				}
-				destVals, err = hdf5utils.NewHdfDataset(REFLINE_RESULT_PATH+dsName, destoptions)
+				destVals, err = hdf5utils.NewHdfDataset(REFPOINT_RESULT_PATH+dsName, destoptions)
 				if err != nil {
 					return err
 				}
