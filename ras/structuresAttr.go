@@ -190,11 +190,11 @@ type structuresAttr66 struct {
 	PierSkew                 Hdf5Float32 `hdf:"Pier Skew"`
 	BrContraction            Hdf5Float32 `hdf:"BR Contraction"`
 	BrExpansion              Hdf5Float32 `hdf:"BR Expansion"`
-	BrPierK                  Hdf5Float32 `hdf:"BR Pier K`
-	BrPierElev               Hdf5Float32 `hdf:"BR Pier Elev`
-	BrStructK                Hdf5Float32 `hdf:"BR Struct K`
-	BrStructElev             Hdf5Float32 `hdf:"BR Struct Elev`
-	BrStructMann             Hdf5Float32 `hdf:"BR Struct Mann`
+	BrPierK                  Hdf5Float32 `hdf:"BR Pier K"`
+	BrPierElev               Hdf5Float32 `hdf:"BR Pier Elev"`
+	BrStructK                Hdf5Float32 `hdf:"BR Struct K"`
+	BrStructElev             Hdf5Float32 `hdf:"BR Struct Elev"`
+	BrStructMann             Hdf5Float32 `hdf:"BR Struct Mann"`
 	BrUsLeftBank             Hdf5Float32 `hdf:"BR US Left Bank"`
 	BrUsRightBank            Hdf5Float32 `hdf:"BR US Right Bank"`
 	BrDsLeftBank             Hdf5Float32 `hdf:"BR DS Left Bank"`
