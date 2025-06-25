@@ -23,10 +23,11 @@ func TestOutletTSAction(t *testing.T) {
 	parameters["hdfDataPath"] = "/Event Conditions/Unsteady/Boundary Conditions/Flow Hydrographs/SA Conn: HowardHansonDam (Outlet TS: HH_TimeseriesOut)"
 	modelDir := filepath.Dir(Duwamish_bfile)
 	action := cc.Action{
-		Name:        "update-outletTS",
 		Type:        "update-outletTS",
 		Description: "update-outletTS",
-		Parameters:  parameters,
+		IOManager: cc.IOManager{
+			Attributes: parameters,
+		},
 	}
 	err := UpdateOutletTSAction(action, modelDir)
 	if err != nil {

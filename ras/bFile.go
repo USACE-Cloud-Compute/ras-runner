@@ -63,10 +63,7 @@ func InitBFile(bfilePath string) (*Bfile, error) {
 
 	//read bfile and gather all blocks.
 	err := bf.readBFile()
-	if err != nil {
-		return &bf, err
-	}
-	return &bf, nil
+	return &bf, err
 
 }
 

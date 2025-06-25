@@ -18,8 +18,8 @@ import (
 func UpdateOutletTSAction(action cc.Action, modelDir string) error {
 	// Assumes bFile and hdf file  were copied local with the CopyLocal action.
 	log.Printf("Ready to update bFile with new observed flows.")
-	bFileName := action.Parameters.GetStringOrFail("bFile")
-	outletTSName := action.Parameters.GetStringOrFail("outletTS")
+	bFileName := action.Attributes.GetStringOrFail("bFile")
+	outletTSName := action.Attributes.GetStringOrFail("outletTS")
 	bfilePath := fmt.Sprintf("%v/%v", modelDir, bFileName)
 	if !fileExists(bfilePath) {
 		return fmt.Errorf("input source %s, was not found in local directory. Run copy-local first", bfilePath)
@@ -42,8 +42,8 @@ func UpdateOutletTSAction(action cc.Action, modelDir string) error {
 	if outletTSIdx == 0 {
 		return errors.New("could not find the outlet TS named " + outletTSName)
 	}
-	hdfDataPath := action.Parameters.GetStringOrFail("hdfDataPath")
-	hdfFileName := action.Parameters.GetStringOrFail("hdfFile")
+	hdfDataPath := action.Attributes.GetStringOrFail("hdfDataPath")
+	hdfFileName := action.Attributes.GetStringOrFail("hdfFile")
 	hdfFilePath := fmt.Sprintf("%v/%v", modelDir, hdfFileName)
 	destfile, err := hdf5.OpenFile(hdfFilePath, hdf5.F_ACC_RDWR) //@TODO ..not closing..
 	if err != nil {

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../cc-go-sdk"
+		}
+	],
+	"settings": {}
+}

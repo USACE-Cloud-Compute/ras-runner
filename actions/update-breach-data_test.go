@@ -21,10 +21,11 @@ func TestBfileAction(t *testing.T) {
 	parameters["geoHdfFile"] = filepath.Base(Geometry_HDF_PATH)
 	modelDir := filepath.Dir(ONE_BREACH_FILE)
 	action := cc.Action{
-		Name:        "update-bfile",
 		Type:        "update-bfile",
 		Description: "update bfile",
-		Parameters:  parameters,
+		IOManager: cc.IOManager{
+			Attributes: parameters,
+		},
 	}
 	err := UpdateBfileAction(action, modelDir)
 	if err != nil {

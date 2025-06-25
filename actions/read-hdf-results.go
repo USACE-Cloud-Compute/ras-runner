@@ -1,17 +1,11 @@
 package actions
 
-import (
-	"bytes"
-	"errors"
-	"fmt"
-	"log"
-	"math"
-	"reflect"
-	"strings"
+//@TODO decide of default path name.  Currently set to "0"
+//@TODO fix log.Fatals followed by a return
 
-	"github.com/usace/cc-go-sdk"
-	"github.com/usace/go-hdf5"
-	"github.com/usace/hdf5utils"
+import (
+	"fmt"
+	"strings"
 )
 
 type EventMaxResult struct {
@@ -40,6 +34,7 @@ func (bclsm SimulationMaxResult) ToBytes() []byte {
 	return []byte(builder.String())
 }
 
+/*
 const BCLINE_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions/"
 
 // ReadBCLinePeakStage reads the peak stage for each bc line element provided.
@@ -51,13 +46,13 @@ func ReadBCLinePeak(action cc.Action) error {
 	}
 
 	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
-	dataSourceName := action.Parameters.GetStringOrFail("bcLineDataSource")
-	variableType := action.Parameters.GetStringOrFail("stage_or_flow")
-	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
-	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
-	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
-	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
-	dataPaths, err := action.Parameters.GetStringSlice("bclines")
+	dataSourceName := action.Attributes.GetStringOrFail("bcLineDataSource")
+	variableType := action.Attributes.GetStringOrFail("stage_or_flow")
+	startEventIndex := action.Attributes.GetInt64OrDefault("start_event_index", 1)
+	endEventIndex := action.Attributes.GetInt64OrFail("end_event_index")
+	outputDataSourceName := action.Attributes.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Attributes.GetStringOrFail("bucket_prefix")
+	dataPaths, err := action.Attributes.GetStringSlice("bclines")
 	if err != nil {
 		return err
 	}
@@ -80,7 +75,7 @@ func ReadBCLinePeak(action cc.Action) error {
 	//index := 0
 	for event := startEventIndex; event <= endEventIndex; event++ {
 		err = func() error {
-			hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
+			hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], event)
 			log.Println("searching for " + hdfPath)
 			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
 
@@ -133,22 +128,22 @@ func ReadBCLinePeak(action cc.Action) error {
 			continue
 		}
 	}
-	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
-	if err != nil {
-		return err
-	}
 	b := simulation.ToBytes()
 	reader := bytes.NewReader(b)
-	//fmt.Println(string(b))
-	err = pm.FileWriter(reader, outputDataSource, 0)
-	//err = pm.PutFile(b, outputDataSource, 0)
-	if err != nil {
-		return err
-	}
-	return nil
 
+	_, err = pm.Put(cc.PutOpInput{
+		SrcReader: reader,
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: outputDataSourceName,
+			PathKey:        "0",
+		},
+	})
+
+	return err
 }
+*/
 
+/*
 const REFLINE_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/"
 
 // ReadRefLinePeakStage reads the peak stage for each bc line element provided.
@@ -160,13 +155,13 @@ func ReadRefLinePeak(action cc.Action) error {
 	}
 
 	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
-	dataSourceName := action.Parameters.GetStringOrFail("refLineDataSource")
-	variableType := action.Parameters.GetStringOrFail("wsel_or_flow")
-	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
-	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
-	dsetNameStringLen := action.Parameters.GetIntOrFail("names_string_length")
-	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
-	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
+	dataSourceName := action.Attributes.GetStringOrFail("refLineDataSource")
+	variableType := action.Attributes.GetStringOrFail("wsel_or_flow")
+	startEventIndex := action.Attributes.GetInt64OrDefault("start_event_index", 1)
+	endEventIndex := action.Attributes.GetInt64OrFail("end_event_index")
+	dsetNameStringLen := action.Attributes.GetIntOrFail("names_string_length")
+	outputDataSourceName := action.Attributes.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Attributes.GetStringOrFail("bucket_prefix")
 	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
 	if err != nil {
 		return err
@@ -179,7 +174,7 @@ func ReadRefLinePeak(action cc.Action) error {
 
 	//eventCount := endEventIndex - startEventIndex
 
-	hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], startEventIndex)
+	hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], startEventIndex)
 	f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
 	if err != nil {
 		return err
@@ -212,7 +207,7 @@ func ReadRefLinePeak(action cc.Action) error {
 	for event := startEventIndex; event <= endEventIndex; event++ {
 		//read the names from the Names Table.
 		err = func() error {
-			hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
+			hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], event)
 			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
 			if err != nil {
 				log.Println(hdfPath + " not found")
@@ -261,15 +256,17 @@ func ReadRefLinePeak(action cc.Action) error {
 		}
 
 	}
-	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
-	if err != nil {
-		return err
-	}
+
 	b := simulation.ToBytes()
 	reader := bytes.NewReader(b)
 
-	err = pm.FileWriter(reader, outputDataSource, 0)
-	//err = pm.PutFile(b, outputDataSource, 0)
+	_, err = pm.Put(cc.PutOpInput{
+		SrcReader: reader,
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: outputDataSourceName,
+			PathKey:        "0",
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -277,133 +274,142 @@ func ReadRefLinePeak(action cc.Action) error {
 	return nil
 }
 
+*/
+
+/*
 const REFPOINT_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/"
 
 // ReadRefLinePeakStage reads the peak stage for each bc line element provided.
-func ReadRefPointPeak(action cc.Action) error {
-	//get the plugin manager
-	pm, err := cc.InitPluginManager()
-	if err != nil {
-		return err
-	}
 
-	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
-	dataSourceName := action.Parameters.GetStringOrFail("refPointDataSource")
-	variableType := action.Parameters.GetStringOrFail("wsel_or_velocity")
-	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
-	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
-	dsetNameStringLen := action.Parameters.GetIntOrFail("names_string_length")
-	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
-	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
-	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
-	if err != nil {
-		return err
-	}
-	//for reflines we have Water Surface or Flow
-	dsName := "Water Surface"
-	if variableType == "velocity" {
-		dsName = "Velocity"
-	}
-
-	//eventCount := endEventIndex - startEventIndex
-
-	hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], startEventIndex)
-	f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
-	if err != nil {
-		return err
-	}
-	namesDataSet, err := hdf5utils.NewHdfDataset(REFPOINT_RESULT_PATH+"Name", hdf5utils.HdfReadOptions{
-		Dtype:        reflect.String,
-		Strsizes:     hdf5utils.NewHdfStrSet(dsetNameStringLen),
-		File:         f,
-		ReadOnCreate: true,
-	})
-	if err != nil {
-		return err
-	}
-	defer namesDataSet.Close()
-	dataPaths := make([]string, namesDataSet.Rows())
-	for i := 0; i < namesDataSet.Rows(); i++ {
-		name := []string{}
-		err := namesDataSet.ReadRow(i, &name)
+	func ReadRefPointPeak(action cc.Action) error {
+		//get the plugin manager
+		pm, err := cc.InitPluginManager()
 		if err != nil {
 			return err
 		}
-		dataPaths[i] = name[0]
-	}
 
-	simulation := SimulationMaxResult{
-		DataPaths: dataPaths,
-		Rows:      []EventMaxResult{},
-	}
-	//crack open a hdf file and read the values for each specified datapath.
-	for event := startEventIndex; event <= endEventIndex; event++ {
-		//read the names from the Names Table.
-		err = func() error {
-			hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
-			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+		//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
+		dataSourceName := action.Attributes.GetStringOrFail("refPointDataSource")
+		variableType := action.Attributes.GetStringOrFail("wsel_or_velocity")
+		startEventIndex := action.Attributes.GetInt64OrDefault("start_event_index", 1)
+		endEventIndex := action.Attributes.GetInt64OrFail("end_event_index")
+		dsetNameStringLen := action.Attributes.GetIntOrFail("names_string_length")
+		outputDataSourceName := action.Attributes.GetStringOrFail("output_file_dataSource")
+		bucketPrefix := action.Attributes.GetStringOrFail("bucket_prefix")
+		hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
+		if err != nil {
+			return err
+		}
+		//for reflines we have Water Surface or Flow
+		dsName := "Water Surface"
+		if variableType == "velocity" {
+			dsName = "Velocity"
+		}
+
+		//eventCount := endEventIndex - startEventIndex
+
+		hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], startEventIndex)
+		f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+		if err != nil {
+			return err
+		}
+		namesDataSet, err := hdf5utils.NewHdfDataset(REFPOINT_RESULT_PATH+"Name", hdf5utils.HdfReadOptions{
+			Dtype:        reflect.String,
+			Strsizes:     hdf5utils.NewHdfStrSet(dsetNameStringLen),
+			File:         f,
+			ReadOnCreate: true,
+		})
+		if err != nil {
+			return err
+		}
+		defer namesDataSet.Close()
+		dataPaths := make([]string, namesDataSet.Rows())
+		for i := 0; i < namesDataSet.Rows(); i++ {
+			name := []string{}
+			err := namesDataSet.ReadRow(i, &name)
 			if err != nil {
-				log.Println(hdfPath + " not found")
 				return err
 			}
-			defer f.Close()
-			var destVals *hdf5utils.HdfDataset
+			dataPaths[i] = name[0]
+		}
+
+		simulation := SimulationMaxResult{
+			DataPaths: dataPaths,
+			Rows:      []EventMaxResult{},
+		}
+		//crack open a hdf file and read the values for each specified datapath.
+		for event := startEventIndex; event <= endEventIndex; event++ {
+			//read the names from the Names Table.
 			err = func() error {
-				destoptions := hdf5utils.HdfReadOptions{
-					Dtype:        reflect.Float32,
-					File:         f,
-					ReadOnCreate: true,
+				hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], event)
+				f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
+				if err != nil {
+					log.Println(hdfPath + " not found")
+					return err
 				}
-				destVals, err = hdf5utils.NewHdfDataset(REFPOINT_RESULT_PATH+dsName, destoptions)
+				defer f.Close()
+				var destVals *hdf5utils.HdfDataset
+				err = func() error {
+					destoptions := hdf5utils.HdfReadOptions{
+						Dtype:        reflect.Float32,
+						File:         f,
+						ReadOnCreate: true,
+					}
+					destVals, err = hdf5utils.NewHdfDataset(REFPOINT_RESULT_PATH+dsName, destoptions)
+					if err != nil {
+						return err
+					}
+					defer destVals.Close()
+					return nil
+				}()
 				if err != nil {
 					return err
 				}
-				defer destVals.Close()
+				eventRow := make([]float32, len(dataPaths))
+				column := []float32{}
+				for idx := range dataPaths {
+					destVals.ReadColumn(idx, &column)
+					var mv float32 = math.SmallestNonzeroFloat32
+					for _, v := range column {
+						if mv <= v {
+							mv = v
+						}
+					}
+					eventRow[idx] = mv
+				}
+				bcEventRow := EventMaxResult{
+					EventId:   event,
+					DataPaths: &simulation.DataPaths,
+					Values:    eventRow,
+				}
+				simulation.Rows = append(simulation.Rows, bcEventRow)
 				return nil
 			}()
 			if err != nil {
-				return err
+				log.Println(err)
 			}
-			eventRow := make([]float32, len(dataPaths))
-			column := []float32{}
-			for idx := range dataPaths {
-				destVals.ReadColumn(idx, &column)
-				var mv float32 = math.SmallestNonzeroFloat32
-				for _, v := range column {
-					if mv <= v {
-						mv = v
-					}
-				}
-				eventRow[idx] = mv
-			}
-			bcEventRow := EventMaxResult{
-				EventId:   event,
-				DataPaths: &simulation.DataPaths,
-				Values:    eventRow,
-			}
-			simulation.Rows = append(simulation.Rows, bcEventRow)
-			return nil
-		}()
-		if err != nil {
-			log.Println(err)
+
 		}
 
-	}
-	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
-	if err != nil {
-		return err
-	}
-	b := simulation.ToBytes()
-	reader := bytes.NewReader(b)
+		b := simulation.ToBytes()
+		reader := bytes.NewReader(b)
 
-	err = pm.FileWriter(reader, outputDataSource, 0)
-	//err = pm.PutFile(b, outputDataSource, 0)
-	if err != nil {
-		log.Fatal(err)
-		return err
+		_, err = pm.Put(cc.PutOpInput{
+			SrcReader: reader,
+			DataSourceOpInput: cc.DataSourceOpInput{
+				DataSourceName: outputDataSourceName,
+				PathKey:        "0",
+			},
+		})
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		return nil
 	}
-	return nil
-}
+*/
+
+/*
 func ReadRefPointMinimum(action cc.Action) error {
 	//get the plugin manager
 	pm, err := cc.InitPluginManager()
@@ -412,13 +418,13 @@ func ReadRefPointMinimum(action cc.Action) error {
 	}
 
 	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
-	dataSourceName := action.Parameters.GetStringOrFail("refPointDataSource")
-	variableType := action.Parameters.GetStringOrFail("wsel_or_velocity")
-	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
-	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
-	dsetNameStringLen := action.Parameters.GetIntOrFail("names_string_length")
-	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
-	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
+	dataSourceName := action.Attributes.GetStringOrFail("refPointDataSource")
+	variableType := action.Attributes.GetStringOrFail("wsel_or_velocity")
+	startEventIndex := action.Attributes.GetInt64OrDefault("start_event_index", 1)
+	endEventIndex := action.Attributes.GetInt64OrFail("end_event_index")
+	dsetNameStringLen := action.Attributes.GetIntOrFail("names_string_length")
+	outputDataSourceName := action.Attributes.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Attributes.GetStringOrFail("bucket_prefix")
 	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
 	if err != nil {
 		return err
@@ -431,7 +437,7 @@ func ReadRefPointMinimum(action cc.Action) error {
 
 	//eventCount := endEventIndex - startEventIndex
 
-	hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], startEventIndex)
+	hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], startEventIndex)
 	f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
 	if err != nil {
 		return err
@@ -464,7 +470,7 @@ func ReadRefPointMinimum(action cc.Action) error {
 	for event := startEventIndex; event <= endEventIndex; event++ {
 		//read the names from the Names Table.
 		err = func() error {
-			hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
+			hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], event)
 			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
 			if err != nil {
 				log.Println(hdfPath + " not found")
@@ -513,15 +519,17 @@ func ReadRefPointMinimum(action cc.Action) error {
 		}
 
 	}
-	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
-	if err != nil {
-		return err
-	}
+
 	b := simulation.ToBytes()
 	reader := bytes.NewReader(b)
 
-	err = pm.FileWriter(reader, outputDataSource, 0)
-	//err = pm.PutFile(b, outputDataSource, 0)
+	_, err = pm.Put(cc.PutOpInput{
+		SrcReader: reader,
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: outputDataSourceName,
+			PathKey:        "0",
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -554,7 +562,9 @@ func (bclsm SimulationMetadata) ToBytes() []byte {
 
 	return []byte(builder.String())
 }
+*/
 
+/*
 const SUMMARY_PATH = "/Results/Unsteady/Summary"
 const TWOD_FLOW_AREA_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Summary Output/2D Flow Areas/"
 
@@ -566,13 +576,13 @@ func ReadSimulationMetadata(action cc.Action) error {
 	}
 
 	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
-	dataSourceName := action.Parameters.GetStringOrFail("simulationDataSource")
-	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
-	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
-	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
-	twoDStorageAreaNameString := action.Parameters.GetStringOrFail("flow_areas")
+	dataSourceName := action.Attributes.GetStringOrFail("simulationDataSource")
+	startEventIndex := action.Attributes.GetInt64OrDefault("start_event_index", 1)
+	endEventIndex := action.Attributes.GetInt64OrFail("end_event_index")
+	bucketPrefix := action.Attributes.GetStringOrFail("bucket_prefix")
+	twoDStorageAreaNameString := action.Attributes.GetStringOrFail("flow_areas")
 	twoDStorageAreaNames := strings.Split(twoDStorageAreaNameString, ", ")
-	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
+	outputDataSourceName := action.Attributes.GetStringOrFail("output_file_dataSource")
 	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
 	if err != nil {
 		return err
@@ -592,7 +602,7 @@ func ReadSimulationMetadata(action cc.Action) error {
 	//crack open a hdf file and read the values for each specified datapath.
 	for event := startEventIndex; event <= endEventIndex; event++ {
 		//read the HDF file.
-		hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
+		hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], event)
 		values := make([]any, 6*len(twoDStorageAreaNames)+4)
 		err = func() error {
 
@@ -659,21 +669,24 @@ func ReadSimulationMetadata(action cc.Action) error {
 		}
 
 	}
-	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
-	if err != nil {
-		return err
-	}
+
 	b := simulation.ToBytes()
 	reader := bytes.NewReader(b)
 
-	err = pm.FileWriter(reader, outputDataSource, 0)
-
+	_, err = pm.Put(cc.PutOpInput{
+		SrcReader: reader,
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: outputDataSourceName,
+			PathKey:        "0",
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
 	return nil
 }
+
 func floatAttribute(name string, grp *hdf5.Group) (float32, error) {
 	if grp.AttributeExists(name) {
 		Attr, err := grp.OpenAttribute(name)
@@ -689,6 +702,7 @@ func floatAttribute(name string, grp *hdf5.Group) (float32, error) {
 	}
 	return 0.0, errors.New("attribute named " + name + " does not exist")
 }
+
 func stringAttribute(name string, grp *hdf5.Group) (string, error) {
 	if grp.AttributeExists(name) {
 		Attr, err := grp.OpenAttribute(name)
@@ -703,7 +717,9 @@ func stringAttribute(name string, grp *hdf5.Group) (string, error) {
 	}
 	return "", errors.New("attribute named " + name + " does not exist")
 }
+*/
 
+/*
 const TWODSTORAGEAREA_STRUCTUREVARIABLES_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/"
 
 // ReadBCLinePeakStage reads the peak stage for each bc line element provided.
@@ -715,13 +731,13 @@ func ReadStructureVariablesPeak(action cc.Action) error {
 	}
 
 	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
-	dataSourceName := action.Parameters.GetStringOrFail("structurevariablesDataSource")
-	startEventIndex := action.Parameters.GetInt64OrDefault("start_event_index", 1)
-	endEventIndex := action.Parameters.GetInt64OrFail("end_event_index")
-	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
-	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
-	twoDFlowarea := action.Parameters.GetStringOrFail("twod_flow_area")
-	dataPathString := action.Parameters.GetStringOrFail("twod_hyd_cons")
+	dataSourceName := action.Attributes.GetStringOrFail("structurevariablesDataSource")
+	startEventIndex := action.Attributes.GetInt64OrDefault("start_event_index", 1)
+	endEventIndex := action.Attributes.GetInt64OrFail("end_event_index")
+	outputDataSourceName := action.Attributes.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Attributes.GetStringOrFail("bucket_prefix")
+	twoDFlowarea := action.Attributes.GetStringOrFail("twod_flow_area")
+	dataPathString := action.Attributes.GetStringOrFail("twod_hyd_cons")
 	dataPaths := strings.Split(dataPathString, ", ")
 	if err != nil {
 		return err
@@ -746,7 +762,7 @@ func ReadStructureVariablesPeak(action cc.Action) error {
 	rootPath := TWODSTORAGEAREA_STRUCTUREVARIABLES_RESULT_PATH + twoDFlowarea
 	for event := startEventIndex; event <= endEventIndex; event++ {
 		err = func() error {
-			hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], event)
+			hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], event)
 			log.Println("searching for " + hdfPath)
 			f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
 
@@ -803,22 +819,26 @@ func ReadStructureVariablesPeak(action cc.Action) error {
 			continue
 		}
 	}
-	outputDataSource, err := pm.GetOutputDataSource(outputDataSourceName)
-	if err != nil {
-		return err
-	}
+
 	b := simulation.ToBytes()
 	reader := bytes.NewReader(b)
-	//fmt.Println(string(b))
-	err = pm.FileWriter(reader, outputDataSource, 0)
-	//err = pm.PutFile(b, outputDataSource, 0)
+
+	_, err = pm.Put(cc.PutOpInput{
+		SrcReader: reader,
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: outputDataSourceName,
+			PathKey:        "0",
+		},
+	})
 	if err != nil {
 		return err
 	}
 	return nil
 
 }
+*/
 
+/*
 func ReadRefLineTimeSeries(action cc.Action) error {
 	//get the plugin manager
 	pm, err := cc.InitPluginManager()
@@ -827,12 +847,12 @@ func ReadRefLineTimeSeries(action cc.Action) error {
 	}
 
 	//hdf file and data paths are specified by a keyword in the input datasets (since im on the older sdk that doesnt have input datasources in actions.)
-	dataSourceName := action.Parameters.GetStringOrFail("refLineDataSource")
-	variableType := action.Parameters.GetStringOrFail("wsel_or_flow")
-	EventIndex := action.Parameters.GetInt64OrDefault("event_index", 1)
-	dsetNameStringLen := action.Parameters.GetIntOrFail("names_string_length")
-	outputDataSourceName := action.Parameters.GetStringOrFail("output_file_dataSource")
-	bucketPrefix := action.Parameters.GetStringOrFail("bucket_prefix")
+	dataSourceName := action.Attributes.GetStringOrFail("refLineDataSource")
+	variableType := action.Attributes.GetStringOrFail("wsel_or_flow")
+	EventIndex := action.Attributes.GetInt64OrDefault("event_index", 1)
+	dsetNameStringLen := action.Attributes.GetIntOrFail("names_string_length")
+	outputDataSourceName := action.Attributes.GetStringOrFail("output_file_dataSource")
+	bucketPrefix := action.Attributes.GetStringOrFail("bucket_prefix")
 	hdfDataSource, err := pm.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
 	if err != nil {
 		return err
@@ -845,7 +865,7 @@ func ReadRefLineTimeSeries(action cc.Action) error {
 
 	//eventCount := endEventIndex - startEventIndex
 
-	hdfPath := fmt.Sprintf(hdfDataSource.Paths[0], EventIndex)
+	hdfPath := fmt.Sprintf(hdfDataSource.Paths["0"], EventIndex)
 	f, err := hdf5utils.OpenFile(hdfPath, bucketPrefix)
 	if err != nil {
 		return err
@@ -914,12 +934,17 @@ func ReadRefLineTimeSeries(action cc.Action) error {
 	if err != nil {
 		return err
 	}
-	outputDataSource.Paths[0] = fmt.Sprintf("%v_event_%v.%v", outputDataSource.Paths[0], EventIndex, "csv")
+	outputDataSource.Paths["0"] = fmt.Sprintf("%v_event_%v.%v", outputDataSource.Paths["0"], EventIndex, "csv")
 	b := result.ToBytes()
 	reader := bytes.NewReader(b)
 
-	err = pm.FileWriter(reader, outputDataSource, 0)
-	//err = pm.PutFile(b, outputDataSource, 0)
+	_, err = pm.Put(cc.PutOpInput{
+		SrcReader: reader,
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: outputDataSourceName,
+			PathKey:        "0",
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -948,3 +973,4 @@ func (etsr EventTimeSeriesResult) ToBytes() []byte {
 	}
 	return []byte(builder.String())
 }
+*/

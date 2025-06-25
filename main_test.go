@@ -2,8 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
-	"ras-runner/actions"
 	"strings"
 	"testing"
 
@@ -29,6 +27,7 @@ func TestHDF_ATTRS(t *testing.T) {
 	}
 }
 
+/*
 func Test_Read_HDF_Attributes(t *testing.T) {
 	// set the manifest id environment variable.
 	os.Setenv("CC_MANIFEST_ID", "99041f15-8274-4782-b67c-bf6216e9fd95")
@@ -103,3 +102,5 @@ func Test_Read_HDF_RefPoint_Min_Data(t *testing.T) {
 	}
 	actions.ReadRefPointMinimum(action)
 }
+
+*/

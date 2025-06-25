@@ -1,4 +1,4 @@
-FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:0.90
+FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:latest
 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
@@ -19,8 +19,8 @@ RUN wget ${NEXUS_RAS_URL} &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras/libs &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras/bin &&\
     chmod -R +x /ras/* &&\
-    wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz -P / &&\
-    tar -xvzf go1.21.5.linux-amd64.tar.gz -C / &&\
+    wget https://go.dev/dl/go1.23.10.linux-amd64.tar.gz -P / &&\
+    tar -xvzf go1.23.10.linux-amd64.tar.gz -C / &&\
     mkdir -p /sim/model
 
 #download test data.

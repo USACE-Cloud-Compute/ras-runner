@@ -19,59 +19,97 @@ import (
 	"unsafe"
 
 	"github.com/usace/cc-go-sdk"
+
 	hdf5 "github.com/usace/go-hdf5"
 	"github.com/usace/hdf5utils"
 )
 
-const (
-	MODEL_DIR         = "/sim/model"
-	MODEL_SCRIPT      = "run-model.sh"
-	MODEL_SCRIPT_PATH = "/ras"
-	GEOM_PREPROC      = "run-geom-preproc.sh"
-	RASTIMEPATH       = "Unsteady Time Series/Time"
-	AWSBUCKET         = "AWS_S3_BUCKET"
-)
+//@TODO fix action description logging back to action.Name
 
 func timePath(datapath string) string {
 	tsroot := datapath[:strings.Index(datapath, "Unsteady Time Series")]
-	return tsroot + RASTIMEPATH
+	return tsroot + actions.RASTIMEPATH
 }
 
 var modelPrefix string
 var event int
 
+// this is the tolerance we will use when comparing float64 values for comparison
+// specifically it is used to compare RAS time values
 var tolerance float64 = 0.000001
 
 func main() {
-	scriptPath := os.Getenv("RAS_SCRIPT_PATH")
-	if scriptPath == "" {
-		scriptPath = MODEL_SCRIPT_PATH
-	}
 	pm, err := cc.InitPluginManager()
 	if err != nil {
-		log.Fatalf("Unable to initialize the CC plugin manager: %s\n", err)
+		log.Fatalf("unable to initialize the CC plugin manager: %s\n", err)
 	}
-	for _, action := range pm.GetPayload().Actions {
-		fmt.Println(action.Name)
+	pm.RunActions()
+	log.Println("Finished")
+}
+
+/*
+*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ */
+
+func actionSwitch(pm *cc.PluginManager) {
+	var err error
+	scriptPath := os.Getenv("RAS_SCRIPT_PATH")
+	if scriptPath == "" {
+		scriptPath = actions.MODEL_SCRIPT_PATH
+	}
+
+	for _, action := range pm.Payload.Actions {
 		switch action.Type {
+
 		case "update-breach-bfile":
+
+			// runner:=actions.UpdateBfileAction2{
+			// 	//PluginManager: pm,
+			// 	Action: action,
+			// 	ModelDir: MODEL_DIR,
+			// }
+			// err:=runner.Run()
+
 			// Assumes bFile and fragility curve file  were copied local with the CopyLocal action.
-			err := actions.UpdateBfileAction(action, MODEL_DIR)
+			err := actions.UpdateBfileAction(action, actions.MODEL_DIR)
 			if err != nil {
-				log.Fatal(err)
+				pm.Logger.Fatal(err.Error())
 			}
 		case "update-outlet-ts-bfile":
 			// Assumes bFile and pxx.tmp.hdf file  were copied local with the CopyLocal action.
-			err := actions.UpdateOutletTSAction(action, MODEL_DIR)
+			err := actions.UpdateOutletTSAction(action, actions.MODEL_DIR)
 			if err != nil {
 				log.Fatal(err)
 			}
 		case "create-ras-tmp":
-			log.Printf("Ready to create temp for %s\n", action.Name)
-			srcname := action.Parameters.GetStringOrFail("src")                               //.Parameters["src"].(map[string]any)["name"].(string)
-			local_dest := action.Parameters.GetStringOrFail("local_dest")                     //.(map[string]any)["name"].(string)
-			save_to_remote := action.Parameters.GetStringOrDefault("save_to_remote", "false") //].(map[string]any)["name"].(string)
-			remote_dest_name := action.Parameters.GetStringOrDefault("remote_dest", "")
+			log.Printf("Ready to create temp for %s\n", action.Description)
+			srcname := action.Attributes.GetStringOrFail("src")                               //.Parameters["src"].(map[string]any)["name"].(string)
+			local_dest := action.Attributes.GetStringOrFail("local_dest")                     //.(map[string]any)["name"].(string)
+			save_to_remote := action.Attributes.GetStringOrDefault("save_to_remote", "false") //].(map[string]any)["name"].(string)
+			remote_dest_name := action.Attributes.GetStringOrDefault("remote_dest", "")
 			/*src, err := pm.GetInputDataSource(srcname)
 			if err != nil {
 				log.Fatalf("Error getting input source %s", srcname)
@@ -85,7 +123,7 @@ func main() {
 				if err != nil {
 					log.Fatalf("Error getting input store %s", src.StoreName)
 				}*/
-			src_local_path := fmt.Sprintf("%s/%s", MODEL_DIR, srcname)
+			src_local_path := fmt.Sprintf("%s/%s", actions.MODEL_DIR, srcname)
 			err = MakeRasHdfTmp(src_local_path, local_dest)
 			if err != nil {
 				log.Println(err)
@@ -94,22 +132,23 @@ func main() {
 				if remote_dest_name == "" {
 					log.Fatal("user requested to save tmp file remotely but provided no output destination name")
 				}
-				remote_dest, err := pm.GetOutputDataSource(remote_dest_name)
-				if err != nil {
-					log.Fatalf("Error getting output source %s", remote_dest_name)
-				}
 				//need to make sure the dest file is closed.
 				//get the bytes of the dest file and push them to the dest datasource.
-				destpath := fmt.Sprintf("%s/%s", MODEL_DIR, local_dest)
-				pm.CopyToRemote(destpath, remote_dest, 0)
+				destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, local_dest)
+
+				pm.CopyFileToRemote(cc.CopyFileToRemoteInput{
+					LocalPath:    destpath,
+					RemoteDsName: remote_dest_name,
+					DsPathKey:    "0",
+				})
 			}
-			log.Printf("Finished creating temp for %s\n", action.Name)
+			log.Printf("Finished creating temp for %s\n", action.Description)
 		case "copy-hdf":
-			log.Printf("Ready to copy %s\n", action.Name)
-			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
-			srcdatapath := action.Parameters["src"].(map[string]any)["datapath"].(string)
-			dest := action.Parameters["dest"].(map[string]any)["name"].(string)
-			destdatapath := action.Parameters["dest"].(map[string]any)["datapath"].(string)
+			log.Printf("Ready to copy %s\n", action.Description)
+			srcname := action.Attributes["src"].(map[string]any)["name"].(string)
+			srcdatapath := action.Attributes["src"].(map[string]any)["datapath"].(string)
+			dest := action.Attributes["dest"].(map[string]any)["name"].(string)
+			destdatapath := action.Attributes["dest"].(map[string]any)["datapath"].(string)
 			src, err := pm.GetInputDataSource(srcname)
 			if err != nil {
 				log.Fatalf("Error getting input source %s", srcname)
@@ -119,16 +158,16 @@ func main() {
 				log.Fatalf("Error getting input store %s", src.StoreName)
 			}
 			log.Printf("%s::::%s", dest, srcstore)
-			log.Printf("Finished creating temp for %s\n", action.Name)
-			err = CopyHdf5Dataset(src.Paths[0], srcdatapath, srcstore, dest, destdatapath)
+			log.Printf("Finished creating temp for %s\n", action.Description)
+			err = CopyHdf5Dataset(src.Paths["0"], srcdatapath, srcstore, dest, destdatapath)
 		case "refline-to-boundary-condition":
 			//@TODO need string length
-			log.Printf("Updating boundary condition %s\n", action.Name)
-			refline := action.Parameters["refline"].(string)
-			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
-			srcdatapath := action.Parameters["src"].(map[string]any)["datapath"].(string)
-			dest := action.Parameters["dest"].(map[string]any)["name"].(string)
-			destdatapath := action.Parameters["dest"].(map[string]any)["datapath"].(string)
+			log.Printf("Updating boundary condition %s\n", action.Description)
+			refline := action.Attributes["refline"].(string)
+			srcname := action.Attributes["src"].(map[string]any)["name"].(string)
+			srcdatapath := action.Attributes["src"].(map[string]any)["datapath"].(string)
+			dest := action.Attributes["dest"].(map[string]any)["name"].(string)
+			destdatapath := action.Attributes["dest"].(map[string]any)["datapath"].(string)
 			src, err := pm.GetInputDataSource(srcname)
 			if err != nil {
 				log.Fatalf("Error getting input source %s", srcname)
@@ -137,17 +176,17 @@ func main() {
 			if err != nil {
 				log.Fatalf("Error getting input store %s", src.StoreName)
 			}
-			err = MigrateRefLineData(src.Paths[0], srcstore, srcdatapath, dest, destdatapath, refline)
+			err = MigrateRefLineData(src.Paths["0"], srcstore, srcdatapath, dest, destdatapath, refline)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			log.Printf("finished updating boundary condition %s\n", action.Name)
+			log.Printf("finished updating boundary condition %s\n", action.Description)
 		case "update-boundary-condition":
-			log.Printf("Updating boundary condition %s\n", action.Name)
-			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
-			srcdatapath := action.Parameters["src"].(map[string]any)["datapath"].(string)
-			dest := action.Parameters["dest"].(map[string]any)["name"].(string)
-			destdatapath := action.Parameters["dest"].(map[string]any)["datapath"].(string)
+			log.Printf("Updating boundary condition %s\n", action.Description)
+			srcname := action.Attributes["src"].(map[string]any)["name"].(string)
+			srcdatapath := action.Attributes["src"].(map[string]any)["datapath"].(string)
+			dest := action.Attributes["dest"].(map[string]any)["name"].(string)
+			destdatapath := action.Attributes["dest"].(map[string]any)["datapath"].(string)
 			src, err := pm.GetInputDataSource(srcname)
 			if err != nil {
 				log.Fatalf("Error getting input source %s", srcname)
@@ -156,22 +195,22 @@ func main() {
 			if err != nil {
 				log.Fatalf("Error getting input store %s", src.StoreName)
 			}
-			err = MigrateBoundaryConditionData(src.Paths[0], srcstore, srcdatapath, dest, destdatapath)
+			err = MigrateBoundaryConditionData(src.Paths["0"], srcstore, srcdatapath, dest, destdatapath)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			log.Printf("finished updating boundary condition %s\n", action.Name)
+			log.Printf("finished updating boundary condition %s\n", action.Description)
 		case "column-to-boundary-condition":
-			log.Printf("Updating boundary condition %s\n", action.Name)
-			column_index := action.Parameters["column-index"].(string)
+			log.Printf("Updating boundary condition %s\n", action.Description)
+			column_index := action.Attributes["column-index"].(string)
 			readcol, err := strconv.Atoi(column_index)
 			if err != nil {
 				log.Fatalf("Invalid column index: %s\n", column_index)
 			}
-			srcname := action.Parameters["src"].(map[string]any)["name"].(string)
-			srcdatapath := action.Parameters["src"].(map[string]any)["datapath"].(string)
-			dest := action.Parameters["dest"].(map[string]any)["name"].(string)
-			destdatapath := action.Parameters["dest"].(map[string]any)["datapath"].(string)
+			srcname := action.Attributes["src"].(map[string]any)["name"].(string)
+			srcdatapath := action.Attributes["src"].(map[string]any)["datapath"].(string)
+			dest := action.Attributes["dest"].(map[string]any)["name"].(string)
+			destdatapath := action.Attributes["dest"].(map[string]any)["datapath"].(string)
 			src, err := pm.GetInputDataSource(srcname)
 			if err != nil {
 				log.Fatalf("Error getting input source %s", srcname)
@@ -180,46 +219,49 @@ func main() {
 			if err != nil {
 				log.Fatalf("Error getting input store %s", src.StoreName)
 			}
-			err = MigrateColumnData(src.Paths[0], srcstore, srcdatapath, dest, destdatapath, readcol)
+			err = MigrateColumnData(src.Paths["0"], srcstore, srcdatapath, dest, destdatapath, readcol)
 			if err != nil {
 				log.Fatalln(err)
 			}
-			log.Printf("finished updating boundary condition %s\n", action.Name)
-		case "copy-inputs":
-			err = fetchInputSourceFiles(pm)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		case "bcline-peak-outputs":
-			err = actions.ReadBCLinePeak(action)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		case "refline-peak-outputs":
-			err = actions.ReadRefLinePeak(action)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		case "refpoint-peak-outputs":
-			err = actions.ReadRefPointPeak(action)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		case "refpoint-min-outputs":
-			err = actions.ReadRefPointMinimum(action)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		case "simulation-attribute-metadata":
-			err = actions.ReadSimulationMetadata(action)
-			if err != nil {
-				log.Fatalln(err)
-			}
-		case "structure-variables-peak-output":
-			err = actions.ReadStructureVariablesPeak(action)
-			if err != nil {
-				log.Fatalln(err)
-			}
+			log.Printf("finished updating boundary condition %s\n", action.Description)
+		// case "copy-inputs":
+		// 	err = fetchInputSourceFiles(pm)
+		// 	if err != nil {
+		// 		pm.Logger.Fatal(err.Error())
+		// 	}
+
+		/*
+			case "bcline-peak-outputs":
+				err = actions.ReadBCLinePeak(action)
+				if err != nil {
+					log.Fatalln(err)
+				}
+			case "refline-peak-outputs":
+				err = actions.ReadRefLinePeak(action)
+				if err != nil {
+					log.Fatalln(err)
+				}
+			case "refpoint-peak-outputs":
+				err = actions.ReadRefPointPeak(action)
+				if err != nil {
+					log.Fatalln(err)
+				}
+			case "refpoint-min-outputs":
+				err = actions.ReadRefPointMinimum(action)
+				if err != nil {
+					log.Fatalln(err)
+				}
+			case "simulation-attribute-metadata":
+				err = actions.ReadSimulationMetadata(action)
+				if err != nil {
+					log.Fatalln(err)
+				}
+			case "structure-variables-peak-output":
+				err = actions.ReadStructureVariablesPeak(action)
+				if err != nil {
+					log.Fatalln(err)
+				}
+		*/
 		case "post-outputs":
 			//this code is a short term fix to allow for more flexibility in this plugin to push things out to an output.
 			//ultimately with the updated sdk's this would change to leverage action level inputs or outputs (which currently do not exist in this version of the sdk...)
@@ -231,19 +273,19 @@ func main() {
 		//use the hashes from the pull from s3 on copy inputs, and check local files to see if there are any changes, and then push any changed files.
 		case "unsteady-simulation":
 			log.Printf("Running unsteady-simulation: %s", action.Description)
-			modelPrefix = pm.GetPayload().Attributes["modelPrefix"].(string)
+			modelPrefix = pm.Payload.Attributes["modelPrefix"].(string)
 
-			plan := pm.GetPayload().Attributes["plan"].(string) //cfile
-			geom := pm.GetPayload().Attributes["geom"].(string) //bfile
+			plan := pm.Payload.Attributes["plan"].(string) //cfile
+			geom := pm.Payload.Attributes["geom"].(string) //bfile
 
 			out := strings.Builder{}
 
-			if gproc, ok := pm.GetPayload().Attributes["geom_preproc"]; ok {
+			if gproc, ok := pm.Payload.Attributes["geom_preproc"]; ok {
 				runGeomPreproc := gproc.(string)
 				if strings.ToLower(runGeomPreproc) == "true" {
-					gppcmd := fmt.Sprintf("%s/%s", scriptPath, GEOM_PREPROC)
-					log.Printf("Running geometry preprocessor: %s %s %s %s\n", gppcmd, MODEL_DIR, modelPrefix, geom)
-					cmdout, err := exec.Command(gppcmd, MODEL_DIR, modelPrefix, geom).Output()
+					gppcmd := fmt.Sprintf("%s/%s", scriptPath, actions.GEOM_PREPROC)
+					log.Printf("Running geometry preprocessor: %s %s %s %s\n", gppcmd, actions.MODEL_DIR, modelPrefix, geom)
+					cmdout, err := exec.Command(gppcmd, actions.MODEL_DIR, modelPrefix, geom).Output()
 					if err != nil {
 						log.Fatalf("Error running geometry preprocessor:%s\n", err)
 					}
@@ -253,10 +295,10 @@ func main() {
 				}
 			}
 
-			log.Printf("Running model %s\n", action.Name)
-			simcmd := fmt.Sprintf("%s/%s", scriptPath, MODEL_SCRIPT)
-			log.Printf("Running model script: %s %s %s %s %s\n", simcmd, MODEL_DIR, modelPrefix, geom, plan)
-			cmdout, err := exec.Command(simcmd, MODEL_DIR, modelPrefix, geom, plan).CombinedOutput()
+			log.Printf("Running model %s\n", action.Description)
+			simcmd := fmt.Sprintf("%s/%s", scriptPath, actions.MODEL_SCRIPT)
+			log.Printf("Running model script: %s %s %s %s %s\n", simcmd, actions.MODEL_DIR, modelPrefix, geom, plan)
+			cmdout, err := exec.Command(simcmd, actions.MODEL_DIR, modelPrefix, geom, plan).CombinedOutput()
 			// grab any log information and write to output location before dealing with any errors
 			out.Write([]byte("---------- RAS Model Output --------------"))
 			_, err = out.Write(cmdout)
@@ -267,12 +309,11 @@ func main() {
 			}
 		default:
 
-			log.Fatalln(action.Name + " not found")
+			log.Fatalln(action.Description + " not found")
 
 		}
 
 	}
-	log.Println("Finished")
 }
 
 var RasTmpDatasets []string = []string{"Geometry", "Plan Data", "Event Conditions"}
@@ -286,7 +327,7 @@ func MakeRasHdfTmp(src string, local_dest string) error {
 	}
 	defer srcfile.Close()
 
-	destpath := fmt.Sprintf("%s/%s", MODEL_DIR, local_dest)
+	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, local_dest)
 	_, err = os.Stat(destpath)
 
 	var destfile *hdf5.File
@@ -381,7 +422,7 @@ func MakeRasHdfTmp(src string, local_dest string) error {
 func CopyHdf5Dataset(src string, srcdataset string, srcstore *cc.DataStore, dest string, destdataset string) error {
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
-		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, AWSBUCKET))
+		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
 		src = fmt.Sprintf(s3BucketTemplate, bucket, srcstore.Parameters["root"], url.QueryEscape(src))
 	}
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
@@ -390,7 +431,7 @@ func CopyHdf5Dataset(src string, srcdataset string, srcstore *cc.DataStore, dest
 	}
 	defer srcfile.Close()
 
-	destpath := fmt.Sprintf("%s/%s", MODEL_DIR, dest)
+	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
 	_, err = os.Stat(destpath)
 
 	var destfile *hdf5.File
@@ -492,7 +533,7 @@ func encodeUrlPath(src string) string {
 func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, refline string) error {
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
-		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, AWSBUCKET))
+		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
 		src = fmt.Sprintf(s3BucketTemplate, bucket, srcstore.Parameters["root"], encodeUrlPath(src))
 	}
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
@@ -551,7 +592,7 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		return errors.New(fmt.Sprintf("Invalid Reference Line: %s\n", refline))
 	}
 
-	destpath := fmt.Sprintf("%s/%s", MODEL_DIR, dest)
+	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
 	_, err = os.Stat(destpath)
 
 	var destfile *hdf5.File
@@ -612,7 +653,7 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string) error {
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
-		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, AWSBUCKET))
+		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
 		src = fmt.Sprintf(s3BucketTemplate, bucket, srcstore.Parameters["root"], encodeUrlPath(src))
 	}
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
@@ -621,7 +662,7 @@ func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapa
 	}
 	defer srcfile.Close()
 
-	destpath := fmt.Sprintf("%s/%s", MODEL_DIR, dest)
+	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
 	_, err = os.Stat(destpath)
 
 	var destfile *hdf5.File
@@ -715,7 +756,7 @@ func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapa
 func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, readcol int) error {
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
-		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, AWSBUCKET))
+		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
 		src = fmt.Sprintf(s3BucketTemplate, bucket, srcstore.Parameters["root"], encodeUrlPath(src))
 	}
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
@@ -724,7 +765,7 @@ func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, 
 	}
 	defer srcfile.Close()
 
-	destpath := fmt.Sprintf("%s/%s", MODEL_DIR, dest)
+	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
 	_, err = os.Stat(destpath)
 
 	var destfile *hdf5.File
@@ -816,16 +857,32 @@ func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, 
 	return nil
 }
 
-func fetchInputSourceFiles(pm *cc.PluginManager) error {
-	for _, ds := range pm.GetInputDataSources() {
+// //////////////
+
+func init() {
+	//cc.ActionRegistry.RegisterAction(&CopyInputsAction{ActionRunnerBase: cc.ActionRunnerBase{ActionName: "copy-inputs"}})
+	action := &CopyInputsAction{}
+	action.SetName("copy-inputs")
+	cc.ActionRegistry.RegisterAction(action)
+}
+
+type CopyInputsAction struct {
+	cc.ActionRunnerBase
+}
+
+func (ca *CopyInputsAction) Run() error {
+	for _, ds := range ca.PluginManager.Inputs {
 		err := func() error {
-			source, err := pm.FileReader(ds, 0)
+			source, err := ca.PluginManager.GetReader(cc.DataSourceOpInput{
+				DataSourceName: ds.Name,
+				PathKey:        "0",
+			})
 			if err != nil {
 				return err
 			}
 			defer source.Close()
-			destfile := fmt.Sprintf("%s/%s", MODEL_DIR, filepath.Base(ds.Paths[0]))
-			log.Printf("Copying %s to %s\n", ds.Paths[0], destfile)
+			destfile := fmt.Sprintf("%s/%s", actions.MODEL_DIR, filepath.Base(ds.Paths["0"]))
+			log.Printf("Copying %s to %s\n", ds.Paths["0"], destfile)
 			destination, err := os.Create(destfile)
 			if err != nil {
 				return err
@@ -835,7 +892,38 @@ func fetchInputSourceFiles(pm *cc.PluginManager) error {
 			return err
 		}()
 		if err != nil {
-			log.Printf("Error fetching %s", ds.Paths[0])
+			log.Printf("Error fetching %s", ds.Paths["0"])
+			return err
+		}
+	}
+	return nil
+}
+
+////////////////
+
+func fetchInputSourceFiles(pm *cc.PluginManager) error {
+	for _, ds := range pm.Inputs {
+		err := func() error {
+			source, err := pm.GetReader(cc.DataSourceOpInput{
+				DataSourceName: ds.Name,
+				PathKey:        "0",
+			})
+			if err != nil {
+				return err
+			}
+			defer source.Close()
+			destfile := fmt.Sprintf("%s/%s", actions.MODEL_DIR, filepath.Base(ds.Paths["0"]))
+			log.Printf("Copying %s to %s\n", ds.Paths["0"], destfile)
+			destination, err := os.Create(destfile)
+			if err != nil {
+				return err
+			}
+			defer destination.Close()
+			_, err = io.Copy(destination, source)
+			return err
+		}()
+		if err != nil {
+			log.Printf("Error fetching %s", ds.Paths["0"])
 			return err
 		}
 	}
@@ -843,10 +931,10 @@ func fetchInputSourceFiles(pm *cc.PluginManager) error {
 }
 func postOuptutFiles(pm *cc.PluginManager) error {
 	//this code is intended to be updated in the future to be more clean, for now it is structured to work without changing any previous actions, and is written with an out of date sdk to support multiple project.s
-	modelPrefix = pm.GetPayload().Attributes["modelPrefix"].(string)
-	plan := pm.GetPayload().Attributes["plan"].(string)
+	modelPrefix = pm.Payload.Attributes["modelPrefix"].(string)
+	plan := pm.Payload.Attributes["plan"].(string)
 	reservedfilename := fmt.Sprintf("%s.p%s.tmp.hdf", modelPrefix, plan)
-	for _, ds := range pm.GetOutputDataSources() {
+	for _, ds := range pm.Outputs {
 		err := func() error {
 			//check if the datasource name is reserved// rasoutput or pxx.tmp.hdf -> ignore these two.
 			if ds.Name == "rasoutput" {
@@ -857,10 +945,14 @@ func postOuptutFiles(pm *cc.PluginManager) error {
 				return nil
 			}
 			//get the local file from the datasource name.
-			return pm.CopyToRemote(fmt.Sprintf("%s/%s", MODEL_DIR, ds.Name), ds, 0)
+			return pm.CopyFileToRemote(cc.CopyFileToRemoteInput{
+				LocalPath:       fmt.Sprintf("%s/%s", actions.MODEL_DIR, ds.Name),
+				RemoteStoreName: ds.Name,
+				RemotePath:      "0",
+			})
 		}()
 		if err != nil {
-			log.Printf("Error fetching %s", ds.Paths[0])
+			log.Printf("Error fetching %s", ds.Paths["0"])
 			return err
 		}
 	}
@@ -870,27 +962,44 @@ func saveResults(pm *cc.PluginManager, rasplan string, raslog *strings.Builder) 
 	//write plan results
 	file := fmt.Sprintf("%s.p%s.tmp.hdf", modelPrefix, rasplan)
 	ds, err := pm.GetOutputDataSource(file)
-	filepath := fmt.Sprintf("%s/%s", MODEL_DIR, file)
+	filepath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, file)
 	reader, err := os.Open(filepath)
 	if err != nil {
 		raslog.WriteString(fmt.Sprintf("Unable to open %s for copying: %s\n", file, err))
 	} else {
 		defer reader.Close()
-		err = pm.FileWriter(reader, ds, 0)
+		//err = pm.FileWriter(reader, ds, 0)
+		_, err = pm.Put(cc.PutOpInput{
+			SrcReader: reader,
+			DataSourceOpInput: cc.DataSourceOpInput{
+				DataSourceName: ds.Name,
+				PathKey:        "0",
+			},
+		})
 		if err != nil {
 			raslog.WriteString(fmt.Sprintf("Unable to copy %s: %s\n", file, err))
 		}
 	}
 	//write log
 	ds, err = pm.GetOutputDataSource("rasoutput")
+	if err != nil {
+		return err
+	}
 	logReader := strings.NewReader(raslog.String())
-	log.Printf("Output log:%s", ds.Paths[0])
-	err = pm.FileWriter(logReader, ds, 0)
+	log.Printf("Output log:%s", ds.Paths["0"])
+	//err = pm.FileWriter(logReader, ds, 0)
+	_, err = pm.Put(cc.PutOpInput{
+		SrcReader: logReader,
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: ds.Name,
+			PathKey:        "0",
+		},
+	})
 	return err
 }
 
 func writeFile(fExt string, obj io.ReadCloser) error {
-	filepath := fmt.Sprintf("%s/%s.%s", MODEL_DIR, modelPrefix, fExt)
+	filepath := fmt.Sprintf("%s/%s.%s", actions.MODEL_DIR, modelPrefix, fExt)
 	f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		return err
