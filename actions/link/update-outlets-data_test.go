@@ -29,7 +29,16 @@ func TestOutletTSAction(t *testing.T) {
 			Attributes: parameters,
 		},
 	}
-	err := UpdateOutletTSAction(action, modelDir)
+
+	runner := UpdateOutletTSAction{
+		ActionRunnerBase: cc.ActionRunnerBase{
+			ActionName: "update-outlet-ts-bfile",
+			Action:     action,
+		},
+		ModelDir: modelDir,
+	}
+
+	err := runner.Run()
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()

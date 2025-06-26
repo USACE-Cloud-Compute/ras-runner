@@ -27,7 +27,14 @@ func TestBfileAction(t *testing.T) {
 			Attributes: parameters,
 		},
 	}
-	err := UpdateBfileAction(action, modelDir)
+	runner := UpdateBfileAction{
+		ActionRunnerBase: cc.ActionRunnerBase{
+			ActionName: "update-breach-bfile",
+			Action:     action,
+		},
+		ModelDir: modelDir,
+	}
+	err := runner.Run()
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()

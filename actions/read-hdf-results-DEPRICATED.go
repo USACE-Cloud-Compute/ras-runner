@@ -3,11 +3,7 @@ package actions
 //@TODO decide of default path name.  Currently set to "0"
 //@TODO fix log.Fatals followed by a return
 
-import (
-	"fmt"
-	"strings"
-)
-
+/*
 type EventMaxResult struct {
 	EventId   int64
 	DataPaths *[]string
@@ -33,6 +29,7 @@ func (bclsm SimulationMaxResult) ToBytes() []byte {
 
 	return []byte(builder.String())
 }
+*/
 
 /*
 const BCLINE_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions/"
