@@ -14,6 +14,12 @@ import (
 
 const REFPOINT_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/"
 
+func init() {
+	cc.ActionRegistry.RegisterAction(&ReadRefPointPeak{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "refpoint-peak-outputs"},
+	})
+}
+
 type ReadRefPointPeak struct {
 	cc.ActionRunnerBase
 }

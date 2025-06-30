@@ -12,7 +12,17 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
-const BCLINE_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions/"
+const (
+	BCLINE_RESULT_PATH string = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions/"
+	STAGE_COLUMN       int    = 0
+	FLOW_COLUMN        int    = 0
+)
+
+func init() {
+	cc.ActionRegistry.RegisterAction(&ReadBcLinePeakAction{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "bcline-peak-outputs"},
+	})
+}
 
 type ReadBcLinePeakAction struct {
 	cc.ActionRunnerBase
@@ -34,17 +44,18 @@ func (a *ReadBcLinePeakAction) Run() error {
 	if err != nil {
 		return err
 	}
+
 	//for bclines stage is column index 0.
-	col := 0
+	col := STAGE_COLUMN
 	if variableType == "flow" {
-		col = 1
+		col = FLOW_COLUMN
 	}
 
-	//eventCount := endEventIndex - startEventIndex
 	simulation := extract.SimulationMaxResult{
 		DataPaths: dataPaths,
 		Rows:      []extract.EventMaxResult{},
 	}
+
 	//crack open a hdf file and read the values for each specified datapath.
 	//index := 0
 	for event := startEventIndex; event <= endEventIndex; event++ {
@@ -69,7 +80,7 @@ func (a *ReadBcLinePeakAction) Run() error {
 					datapath := fmt.Sprintf("%s/%s", BCLINE_RESULT_PATH, bcline)
 					ds, err := hdf5utils.NewHdfDataset(datapath, options)
 					if err != nil {
-						log.Println(fmt.Sprintf("%v %v", hdfPath, bcline))
+						log.Printf("%v %v", hdfPath, bcline)
 						return err
 					}
 					defer ds.Close()
@@ -78,7 +89,6 @@ func (a *ReadBcLinePeakAction) Run() error {
 					var mv float32 = math.SmallestNonzeroFloat32
 
 					for _, v := range column {
-						//fmt.Printf("%f\n", v)
 						if v >= mv {
 							mv = v
 						}
@@ -87,7 +97,7 @@ func (a *ReadBcLinePeakAction) Run() error {
 					return nil
 				}()
 				if err != nil {
-					log.Fatal(err)
+					return err
 				}
 			}
 			bcEventRow := extract.EventMaxResult{

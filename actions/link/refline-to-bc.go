@@ -13,6 +13,12 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+func init() {
+	cc.ActionRegistry.RegisterAction(&ReflineToBc{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "refline-to-boundary-condition"},
+	})
+}
+
 // refline to boundary condition
 type ReflineToBc struct {
 	cc.ActionRunnerBase

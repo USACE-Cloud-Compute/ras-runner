@@ -14,6 +14,12 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+func init() {
+	cc.ActionRegistry.RegisterAction(&UpdateBoundaryConditionAction{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "update-boundary-condition"},
+	})
+}
+
 type UpdateBoundaryConditionAction struct {
 	cc.ActionRunnerBase
 }

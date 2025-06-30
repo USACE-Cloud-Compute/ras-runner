@@ -8,6 +8,12 @@ import (
 	"github.com/usace/cc-go-sdk"
 )
 
+func init() {
+	cc.ActionRegistry.RegisterAction(&PostOutputsAction{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "post-outputs"},
+	})
+}
+
 type PostOutputsAction struct {
 	cc.ActionRunnerBase
 }

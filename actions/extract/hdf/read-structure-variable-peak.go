@@ -14,11 +14,17 @@ import (
 
 const TWODSTORAGEAREA_STRUCTUREVARIABLES_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/"
 
-type ReadStructureVariablePeak struct {
+func init() {
+	cc.ActionRegistry.RegisterAction(&ReadStructureVariablesPeak{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "structure-variables-peak-output"},
+	})
+}
+
+type ReadStructureVariablesPeak struct {
 	cc.ActionRunnerBase
 }
 
-func (a *ReadStructureVariablePeak) Run() error {
+func (a *ReadStructureVariablesPeak) Run() error {
 	dataSourceName := a.Action.Attributes.GetStringOrFail("structurevariablesDataSource")
 	startEventIndex := a.Action.Attributes.GetInt64OrDefault("start_event_index", 1)
 	endEventIndex := a.Action.Attributes.GetInt64OrFail("end_event_index")

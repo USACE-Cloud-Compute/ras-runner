@@ -12,11 +12,17 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+func init() {
+	cc.ActionRegistry.RegisterAction(&ReadRefPointMin{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "refpoint-min-outputs"},
+	})
+}
+
 type ReadRefPointMin struct {
 	cc.ActionRunnerBase
 }
 
-func (a ReadRefPointMin) Run() error {
+func (a *ReadRefPointMin) Run() error {
 	dataSourceName := a.Action.Attributes.GetStringOrFail("refPointDataSource")
 	variableType := a.Action.Attributes.GetStringOrFail("wsel_or_velocity")
 	startEventIndex := a.Action.Attributes.GetInt64OrDefault("start_event_index", 1)

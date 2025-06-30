@@ -15,6 +15,12 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+func init() {
+	cc.ActionRegistry.RegisterAction(&ColumnToBcAction{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "column-to-boundary-condition"},
+	})
+}
+
 type ColumnToBcAction struct {
 	cc.ActionRunnerBase
 }

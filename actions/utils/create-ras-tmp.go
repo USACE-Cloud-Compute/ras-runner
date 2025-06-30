@@ -16,11 +16,17 @@ import (
 
 var RasTmpDatasets []string = []string{"Geometry", "Plan Data", "Event Conditions"}
 
-type CreateRasTmp struct {
+func init() {
+	cc.ActionRegistry.RegisterAction(&CreateRasTmpAction{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "create-ras-tmp"},
+	})
+}
+
+type CreateRasTmpAction struct {
 	cc.ActionRunnerBase
 }
 
-func (a *CreateRasTmp) Run() error {
+func (a *CreateRasTmpAction) Run() error {
 	log.Printf("Ready to create temp for %s\n", a.Action.Description)
 	srcname, err := a.Action.Attributes.GetString("src")
 	if err != nil {

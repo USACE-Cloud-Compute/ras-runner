@@ -13,16 +13,16 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&CopyHdfDataset{
+	cc.ActionRegistry.RegisterAction(&CopyHdfDatasetAction{
 		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "copy-hdf"},
 	})
 }
 
-type CopyHdfDataset struct {
+type CopyHdfDatasetAction struct {
 	cc.ActionRunnerBase
 }
 
-func (a *CopyHdfDataset) Run() error {
+func (a *CopyHdfDatasetAction) Run() error {
 	log.Printf("Ready to copy %s\n", a.Action.Description)
 
 	srcname := a.Action.Attributes["src"].(map[string]any)["name"].(string)

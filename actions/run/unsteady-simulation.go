@@ -11,6 +11,12 @@ import (
 	"github.com/usace/cc-go-sdk"
 )
 
+func init() {
+	cc.ActionRegistry.RegisterAction(&UnsteadySimulationAction{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "unsteady-simulation"},
+	})
+}
+
 type UnsteadySimulationAction struct {
 	cc.ActionRunnerBase
 }

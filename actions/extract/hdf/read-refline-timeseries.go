@@ -11,6 +11,12 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+func init() {
+	cc.ActionRegistry.RegisterAction(&ReadRefLineTimeSeriesAction{
+		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "refline-time-series"},
+	})
+}
+
 type ReadRefLineTimeSeriesAction struct {
 	cc.ActionRunnerBase
 }

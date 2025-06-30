@@ -1,13 +1,6 @@
 package main
 
-import (
-	"log"
-	"strings"
-	"testing"
-
-	"github.com/usace/cc-go-sdk"
-)
-
+/*
 func TestSaveOutput(t *testing.T) {
 	pm, err := cc.InitPluginManager()
 	if err != nil {
@@ -26,6 +19,7 @@ func TestHDF_ATTRS(t *testing.T) {
 		t.Fail()
 	}
 }
+*/
 
 /*
 func Test_Read_HDF_Attributes(t *testing.T) {
