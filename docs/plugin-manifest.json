@@ -1,0 +1,58 @@
+{
+    "name":"CC-RAS-PLUGIN",
+    "image_and_tag":"ras-runner-{VERSION}:latest",
+    "description":"RAS {VERSION} Runner",
+    "command":["/ras/bin/ras-runner"],
+    "compute_environment":{
+        "vcpu":"2",
+        "memory":"4096"
+    },
+    "environment":[
+        {
+            "name":  "CC_AWS_DEFAULT_REGION",
+            "value": ""
+        },
+        {
+            "name":  "CC_AWS_S3_BUCKET",
+            "value": ""
+        },
+        {
+            "name":  "CC_AWS_ENDPOINT",
+            "value": ""
+        },
+        {
+            "name":  "{DATASTORE}_AWS_DEFAULT_REGION",
+            "value": ""
+        },
+        {
+            "name":  "{DATASTORE}_AWS_S3_BUCKET",
+            "value": ""
+        },
+        {
+            "name":  "{DATASTORE}_AWS_ENDPOINT",
+            "value": ""
+        },
+        {
+            "name":  "RAS_SCRIPT_PATH",
+            "value": "/ras/bin"
+        }
+    ],
+    "credentials":[
+        {
+            "name":  "CC_AWS_ACCESS_KEY_ID",
+            "value": "secretsmanager:AWS_ACCESS_KEY_ID::"
+        },
+        {
+            "name":  "CC_AWS_SECRET_ACCESS_KEY",
+            "value": "secretsmanager:AWS_SECRET_ACCESS_KEY::"
+        },
+        {
+            "name":  "{DATASTORE}_AWS_ACCESS_KEY_ID",
+            "value": "secretsmanager:AWS_ACCESS_KEY_ID::"
+        },
+        {
+            "name":  "{DATASTORE}_AWS_SECRET_ACCESS_KEY",
+            "value": "secretsmanager:AWS_SECRET_ACCESS_KEY::"
+        }
+    ]
+}
