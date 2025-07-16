@@ -12,10 +12,7 @@ import (
 )
 
 func init() {
-	//cc.ActionRegistry.RegisterAction(&CopyInputsAction{ActionRunnerBase: cc.ActionRunnerBase{ActionName: "copy-inputs"}})
-	action := &CopyInputsAction{}
-	action.SetName("copy-inputs")
-	cc.ActionRegistry.RegisterAction(action)
+	cc.ActionRegistry.RegisterAction("copy-inputs", &CopyInputsAction{})
 }
 
 type CopyInputsAction struct {
@@ -23,6 +20,7 @@ type CopyInputsAction struct {
 }
 
 func (ca *CopyInputsAction) Run() error {
+	log.Println("Starting copy inputs action")
 	for _, ds := range ca.PluginManager.Inputs {
 		err := func() error {
 			source, err := ca.PluginManager.GetReader(cc.DataSourceOpInput{

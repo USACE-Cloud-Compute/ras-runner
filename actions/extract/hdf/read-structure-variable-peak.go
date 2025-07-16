@@ -15,9 +15,7 @@ import (
 const TWODSTORAGEAREA_STRUCTUREVARIABLES_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/"
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&ReadStructureVariablesPeak{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "structure-variables-peak-output"},
-	})
+	cc.ActionRegistry.RegisterAction("structure-variables-peak-output", &ReadStructureVariablesPeak{})
 }
 
 type ReadStructureVariablesPeak struct {

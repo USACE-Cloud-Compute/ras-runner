@@ -15,9 +15,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&UpdateOutletTSAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "update-outlet-ts-bfile"},
-	})
+	cc.ActionRegistry.RegisterAction("update-outlet-ts-bfile", &UpdateOutletTSAction{})
 }
 
 type UpdateOutletTSAction struct {

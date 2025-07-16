@@ -22,7 +22,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("unable to initialize the CC plugin manager: %s\n", err)
 	}
-	pm.RunActions()
+	err = pm.RunActions()
+	if err != nil {
+		log.Fatalf("Error running actions: %s\n", err)
+	}
 	log.Println("Finished")
 }
 

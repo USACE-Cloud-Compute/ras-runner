@@ -14,9 +14,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&ReflineToBc{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "refline-to-boundary-condition"},
-	})
+	cc.ActionRegistry.RegisterAction("refline-to-boundary-condition", &ReflineToBc{})
 }
 
 // refline to boundary condition

@@ -1,12 +1,14 @@
 #Set up the environment to build the cc-ras-runner plugin
-#FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:0.90 as builder
-FROM ras6-linux-base:0.90 as builder
+FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:latest as builder
+#FROM ras6-linux-base:0.90 as builder
 
 #names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
 ARG RAS_DEPLOYMENT=EngineOnly
 ARG RAS_VERSION=HEC-RAS_641_Linux
 ARG RAS_ARCHIVE=${RAS_VERSION}_${RAS_DEPLOYMENT}.zip
 ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/${RAS_ARCHIVE}
+ARG GOVERSION=1.23.10
+ARG GOBINARCH=linux-amd64
 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
@@ -21,8 +23,8 @@ RUN wget ${NEXUS_RAS_URL} &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras/libs &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras/bin &&\
     chmod -R +x /ras/* &&\ 
-    wget https://go.dev/dl/go1.18.1.linux-amd64.tar.gz -P / &&\
-    tar -xvzf go1.18.1.linux-amd64.tar.gz -C / &&\
+    wget https://go.dev/dl/go${GOVERSION}.${GOBINARCH}.tar.gz -P / &&\
+    tar -xvzf go${GOVERSION}.${GOBINARCH}.tar.gz -C / &&\
     mkdir -p src/ras-runner 
 
 COPY ./ /src/ras-runner

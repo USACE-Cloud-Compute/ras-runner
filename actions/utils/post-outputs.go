@@ -9,9 +9,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&PostOutputsAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "post-outputs"},
-	})
+	cc.ActionRegistry.RegisterAction("post-outputs", &PostOutputsAction{})
 }
 
 type PostOutputsAction struct {

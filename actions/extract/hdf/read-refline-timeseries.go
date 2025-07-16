@@ -12,9 +12,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&ReadRefLineTimeSeriesAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "refline-time-series"},
-	})
+	cc.ActionRegistry.RegisterAction("refline-time-series", &ReadRefLineTimeSeriesAction{})
 }
 
 type ReadRefLineTimeSeriesAction struct {

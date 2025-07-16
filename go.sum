@@ -116,6 +116,10 @@ github.com/usace/cc-go-sdk v0.0.0-20240105191843-5d5ac60d7f28 h1:XcqzZs4CSxfIw+P
 github.com/usace/cc-go-sdk v0.0.0-20240105191843-5d5ac60d7f28/go.mod h1:ZKGRTzO8eO1FUEtecjCS8MazihGCKW+dGqI9uusL1HI=
 github.com/usace/cc-go-sdk v0.0.0-20250423183331-8eba23b117a8 h1:ZmUZ0F4FVDKfmGBEEVqcXzT/7YqIh09jpfaCrdk+r+w=
 github.com/usace/cc-go-sdk v0.0.0-20250423183331-8eba23b117a8/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
+github.com/usace/cc-go-sdk v0.0.0-20250701115303-082ae1903538 h1:8sUapdryC+342LyyJbs/VST5AYxO9r0HF3yEj21J7qQ=
+github.com/usace/cc-go-sdk v0.0.0-20250701115303-082ae1903538/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
+github.com/usace/cc-go-sdk v0.0.0-20250708142539-ab413ab1d306 h1:GGWp7VmXxszMWg6z1byjkp0crXRemk/SVIIGuwwjBnE=
+github.com/usace/cc-go-sdk v0.0.0-20250708142539-ab413ab1d306/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
 github.com/usace/filesapi v0.0.0-20240105190612-7968d4f3fe61 h1:5XBnZbJhmbRfBfhUqMzqkRIOkzbEp6MhDKsj7SK7tIk=
 github.com/usace/filesapi v0.0.0-20240105190612-7968d4f3fe61/go.mod h1:n93SV2TkqTZQvaxEmraFCSMUDTbPVyc2uc8q+UTp9Q8=
 github.com/usace/filesapi v0.0.0-20240315200543-841da1a812a3 h1:P7gZPn+X0+qacIxzA+MRyDtzAN2kMopWKYWfytvt2iw=

@@ -17,9 +17,7 @@ import (
 var RasTmpDatasets []string = []string{"Geometry", "Plan Data", "Event Conditions"}
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&CreateRasTmpAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "create-ras-tmp"},
-	})
+	cc.ActionRegistry.RegisterAction("create-ras-tmp", &CreateRasTmpAction{})
 }
 
 type CreateRasTmpAction struct {

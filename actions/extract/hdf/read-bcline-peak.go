@@ -19,9 +19,7 @@ const (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&ReadBcLinePeakAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "bcline-peak-outputs"},
-	})
+	cc.ActionRegistry.RegisterAction("bcline-peak-outputs", &ReadBcLinePeakAction{})
 }
 
 type ReadBcLinePeakAction struct {

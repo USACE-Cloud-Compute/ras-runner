@@ -15,9 +15,7 @@ import (
 const REFLINE_RESULT_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/"
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&ReadRefLinePeakAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "refline-peak-outputs"},
-	})
+	cc.ActionRegistry.RegisterAction("refline-peak-outputs", &ReadRefLinePeakAction{})
 }
 
 type ReadRefLinePeakAction struct {

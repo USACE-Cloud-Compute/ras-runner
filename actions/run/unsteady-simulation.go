@@ -12,9 +12,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&UnsteadySimulationAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "unsteady-simulation"},
-	})
+	cc.ActionRegistry.RegisterAction("unsteady-simulation", &UnsteadySimulationAction{})
 }
 
 type UnsteadySimulationAction struct {

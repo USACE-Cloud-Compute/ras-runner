@@ -15,9 +15,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&UpdateBoundaryConditionAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "update-boundary-condition"},
-	})
+	cc.ActionRegistry.RegisterAction("update-boundary-condition", &UpdateBoundaryConditionAction{})
 }
 
 type UpdateBoundaryConditionAction struct {

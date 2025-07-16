@@ -13,9 +13,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&UpdateBfileAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "update-breach-bfile"},
-	})
+	cc.ActionRegistry.RegisterAction("update-breach-bfile", &UpdateBfileAction{})
 }
 
 // UpdateBfileAction is an action that updates breach elevations in a bfile based on fragility curve results.

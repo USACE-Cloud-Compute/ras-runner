@@ -16,9 +16,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&ColumnToBcAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "column-to-boundary-condition"},
-	})
+	cc.ActionRegistry.RegisterAction("column-to-boundary-condition", &ColumnToBcAction{})
 }
 
 type ColumnToBcAction struct {

@@ -13,9 +13,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&CopyHdfDatasetAction{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "copy-hdf"},
-	})
+	cc.ActionRegistry.RegisterAction("copy-hdf", &CopyHdfDatasetAction{})
 }
 
 type CopyHdfDatasetAction struct {

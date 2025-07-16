@@ -17,9 +17,7 @@ const SUMMARY_PATH = "/Results/Unsteady/Summary"
 const TWOD_FLOW_AREA_PATH = "/Results/Unsteady/Output/Output Blocks/Base Output/Summary Output/2D Flow Areas/"
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&ReadSimulationMetadata{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "simulation-attribute-metadata"},
-	})
+	cc.ActionRegistry.RegisterAction("simulation-attribute-metadata", &ReadSimulationMetadata{})
 }
 
 type ReadSimulationMetadata struct {

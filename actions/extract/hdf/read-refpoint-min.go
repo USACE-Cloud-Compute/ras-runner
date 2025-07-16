@@ -13,9 +13,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction(&ReadRefPointMin{
-		ActionRunnerBase: cc.ActionRunnerBase{ActionName: "refpoint-min-outputs"},
-	})
+	cc.ActionRegistry.RegisterAction("refpoint-min-outputs", &ReadRefPointMin{})
 }
 
 type ReadRefPointMin struct {
