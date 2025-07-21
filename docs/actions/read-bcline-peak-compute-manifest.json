@@ -1,0 +1,115 @@
+{
+    "manifest_name":     "read-bcline-peak",
+    "plugin_definition": "CC-RAS-PLUGIN",
+    "stores": [
+        {
+            "name":      "RAS-MODEL",
+            "store_type": "S3",
+            "profile": "{DATASTORE}",
+            "params": {
+                "root": "/my/root/path"
+            }
+        }
+    ],
+    "resource_requirements":[
+        {
+            "resource_type":  "VCPU",
+            "value": "2"
+        },
+        {
+            "resource_type":  "MEMORY",
+            "value": "3000"
+        }
+    ],
+    "inputs":{
+      "payload_attributes": {
+        "modelPrefix":"blw-east-fork",
+        "plan": "01",
+        "geom": "01"
+      },
+      "data_sources": [
+        {
+            "name": "{ATTR::modelPrefix}.b{ATTR::plan}",
+            "paths": {
+                "0": "{ATTR::modelPrefix}.b{ATTR::plan}"
+            },
+            "store_name": "FFRD"   
+        },
+        {
+            "name": "{ATTR::modelPrefix}.bco{ATTR::plan}",
+            "paths": {
+                "0": "{ATTR::modelPrefix}.bco{ATTR::plan}"
+            },
+            "store_name": "FFRD"   
+        },
+        {
+            "name": "{ATTR::modelPrefix}.dsc.h5",
+            "paths": {
+                "0": "{ATTR::modelPrefix}.dsc.h5"
+            },
+            "store_name": "FFRD"   
+        },
+        {
+            "name": "{ATTR::modelPrefix}.g{ATTR::geom}.hdf",
+            "paths": {
+              "0": "{ATTR::modelPrefix}.g{ATTR::geom}.hdf"
+            },
+            "store_name": "FFRD"   
+        },
+        {
+            "name": "{ATTR::modelPrefix}.p{ATTR::plan}.tmp.hdf",
+            "paths": {
+                "0": "{ATTR::modelPrefix}.p{ATTR::plan}.tmp.hdf"
+            },
+            "store_name": "FFRD"   
+        },
+        {
+            "name": "{ATTR::modelPrefix}.x{ATTR::plan}",
+            "paths": {
+                "0": "{ATTR::modelPrefix}.x{ATTR::plan}"
+            },
+            "store_name": "FFRD"   
+        },
+        {
+            "name": "{ATTR::modelPrefix}.u{ATTR::plan}",
+            "paths": {
+                "0": "{ATTR::modelPrefix}.u{ATTR::plan}"
+            },
+            "store_name": "FFRD"   
+        }
+      ]
+    },
+    "outputs":[
+      {
+        "name": "{ATTR::modelPrefix}.p{ATTR::plan}.tmp.hdf",
+        "paths": {
+            "0": "scenarios/{ENV::CC_EVENT_IDENTIFIER}/hydraulics/{ATTR::modelPrefix}.p{ATTR::plan}.hdf"
+        },
+        "store_name": "FFRD"
+      },
+      {
+        "name": "rasoutput",
+        "paths": {
+            "0": "scenarios/{ENV::CC_EVENT_IDENTIFIER}/hydraulics/rasoutput.log"
+        },
+        "store_name": "FFRD"
+      }
+    ],
+    "actions": [
+       {
+            "name": "copy-inputs",
+            "type": "utils",
+            "description": "generating seeds by blocks"
+        },
+        {
+            "name": "unsteady-simulation",
+            "type": "run",
+            "description": "run the ras simulation"
+        }, 
+        {
+            "name": "post-outputs",
+            "type": "utils",
+            "description": "copy output to store"
+        }
+    ]
+}
