@@ -11,7 +11,7 @@ func TestReadBclinePeakAction(t *testing.T) {
 		EndEventIndex:   1,
 		Hdf5Path:        hdffile,
 		BucketPath:      "",
-		BcLines:         []string{"HHRes_Outlet_DS - Flow per Cell"},
+		BcLines:         []string{"HHRes_Outlet_DS - Flow per Cell", "S_BIGSOOS10 - Flow per Cell"},
 		VariableType:    "flow",
 	}
 

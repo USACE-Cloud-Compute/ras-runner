@@ -34,6 +34,7 @@ func (a *ReadBcLinePeakAction) Run() error {
 	endEventIndex := a.Action.Attributes.GetInt64OrFail("end_event_index")
 	outputDataSourceName := a.Action.Attributes.GetStringOrFail("output_file_dataSource")
 	bucketPrefix := a.Action.Attributes.GetStringOrFail("bucket_prefix")
+
 	dataPaths, err := a.Action.Attributes.GetStringSlice("bclines")
 	if err != nil {
 		return err
@@ -98,17 +99,19 @@ func readBcLinePeak(input ReadBcLinePeakInput) (io.Reader, error) {
 		err := func() error {
 			hdfPath := fmt.Sprintf(input.Hdf5Path, event)
 			log.Println("searching for " + hdfPath)
-			f, err := hdf5utils.OpenFile(hdfPath, input.BucketPath)
 
+			f, err := hdf5utils.OpenFile(hdfPath, input.BucketPath)
 			if err != nil {
 				return err
 			}
 			defer f.Close()
+
 			options := hdf5utils.HdfReadOptions{
 				Dtype:        reflect.Float32,
 				ReadOnCreate: true,
 				File:         f,
 			}
+
 			eventRow := make([]float32, len(input.BcLines))
 
 			for idx, bcline := range input.BcLines {
@@ -122,7 +125,7 @@ func readBcLinePeak(input ReadBcLinePeakInput) (io.Reader, error) {
 					defer ds.Close()
 					column := []float32{}
 					ds.ReadColumn(col, &column)
-					maxVal := NumericSlice[float32]{column}.Max()
+					maxVal := sliceMax(column)
 					eventRow[idx] = maxVal
 					return nil
 				}()
@@ -151,19 +154,39 @@ type Number interface {
 	int | int8 | int16 | int32 | int64 | float32 | float64
 }
 
-type NumericSlice[T Number] struct {
-	data []T
-}
-
-func (ns NumericSlice[T]) Max() T {
-	maxVal := ns.data[0]
-	for i := 0; i < len(ns.data); i++ {
-		if ns.data[i] > maxVal {
-			maxVal = ns.data[i]
+func sliceMax[T Number](data []T) T {
+	maxVal := data[0]
+	for i := 0; i < len(data); i++ {
+		if data[i] > maxVal {
+			maxVal = data[i]
 		}
 	}
 	return maxVal
 }
+
+func colMax[T Number](data [][]T, col int) T {
+	maxVal := data[0][col]
+	for i := range data {
+		if data[i][col] > maxVal {
+			maxVal = data[i][col]
+		}
+	}
+	return maxVal
+}
+
+// type NumericSlice[T Number] struct {
+// 	data []T
+// }
+
+// func (ns NumericSlice[T]) Max() T {
+// 	maxVal := ns.data[0]
+// 	for i := 0; i < len(ns.data); i++ {
+// 		if ns.data[i] > maxVal {
+// 			maxVal = ns.data[i]
+// 		}
+// 	}
+// 	return maxVal
+// }
 
 /*
 func (a *ReadBcLinePeakAction) RunOld() error {

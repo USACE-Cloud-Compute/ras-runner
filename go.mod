@@ -4,7 +4,7 @@ go 1.23
 
 toolchain go1.23.10
 
-//replace github.com/usace/hdf5utils => /workspaces/hdf5utils
+replace github.com/usace/hdf5utils => /workspaces/hdf5utils
 //replace github.com/usace/cc-go-sdk => /workspaces/cc-go-sdk
 
 require (

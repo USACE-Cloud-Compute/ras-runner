@@ -28,9 +28,10 @@ func (a *ReadRefLinePeakAction) Run() error {
 	variableType := a.Action.Attributes.GetStringOrFail("wsel_or_flow")
 	startEventIndex := a.Action.Attributes.GetInt64OrDefault("start_event_index", 1)
 	endEventIndex := a.Action.Attributes.GetInt64OrFail("end_event_index")
-	dsetNameStringLen := a.Action.Attributes.GetIntOrFail("names_string_length")
 	outputDataSourceName := a.Action.Attributes.GetStringOrFail("output_file_dataSource")
 	bucketPrefix := a.Action.Attributes.GetStringOrFail("bucket_prefix")
+
+	dsetNameStringLen := a.Action.Attributes.GetIntOrFail("names_string_length")
 	hdfDataSource, err := a.PluginManager.GetInputDataSource(dataSourceName) // expected to look something like this "https://bucket-name.s3.re-gio-n.amazonaws.com/model-library/ffrd-duwamish/simulations/validation/%v/Hydraulics/Duwamish_17110013.p01.hdf"
 	if err != nil {
 		return err
