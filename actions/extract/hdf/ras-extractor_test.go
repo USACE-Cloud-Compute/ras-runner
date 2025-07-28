@@ -20,7 +20,7 @@ func TestReadBcLinePeak(t *testing.T) {
 		WriterType:     ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestReadReflineLinePeakWaterSurface(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestReadReflineLinePeakFlow(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestReadReflineTimeSeriesWaterSurface(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestReadReflineTimeSeriesFlow(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestReadRefpointMinVelocity(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestReadRefpointMinWaterSurface(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestReadRefpointPeakVelocity(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func TestReadRefpointPeakWaterSurface(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestReadRefpointMaxAndMinWaterSurface(t *testing.T) {
 		WriterType:      ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,21 @@ func TestReadStructureVariablePeak(t *testing.T) {
 		WriterType:   ConsoleWriter,
 	}
 
-	err := RunExtract(input, TestRasHdfFile)
+	err := DataExtract(input, TestRasHdfFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAttributeReader(t *testing.T) {
+	input := AttributeExtractInput{
+		AttributePath:  "/Results/Unsteady/Summary",
+		AttributeNames: []string{"Computation Time DSS", "Computation Time Total", "Maximum WSEL Error", "Maximum number of cores"},
+		AttributeTypes: []string{"string", "string", "float32", "int32"},
+		WriterType:     ConsoleWriter,
+	}
+
+	err := AttributeExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}

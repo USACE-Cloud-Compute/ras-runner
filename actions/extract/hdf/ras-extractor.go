@@ -2,6 +2,7 @@ package hdf
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"regexp"
 
@@ -47,7 +48,7 @@ type WriteRasDataInput[T RasExtractDataTypes] struct {
 	WriteSummary bool
 }
 
-func RunExtract(input RasExtractInput, filepath string) error {
+func DataExtract(input RasExtractInput, filepath string) error {
 	extractor, err := NewRasExtractor(filepath)
 	if err != nil {
 		return err
@@ -316,4 +317,113 @@ func (rw *ConsoleRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
 	}
 
 	return nil
+}
+
+// //////////////////
+// /////////////////
+
+type AttributeExtractWriter interface {
+	Write(vals map[string]any) error
+}
+
+type ConsoleAttributeExtractWriter struct{}
+
+func (cw *ConsoleAttributeExtractWriter) Write(vals map[string]any) error {
+	for k, v := range vals {
+		fmt.Printf("%s::%v\n", k, v)
+	}
+	return nil
+}
+
+type AttributeExtractInput struct {
+	AttributePath  string
+	AttributeNames []string
+	AttributeTypes []string
+	WriterType     RasExtractWriterType
+}
+
+func AttributeExtract(input AttributeExtractInput, filepath string) error {
+	extractor, err := NewRasExtractor(filepath)
+	if err != nil {
+		return err
+	}
+	vals, err := extractor.Attributes(input)
+	if err != nil {
+		return err
+	}
+	writer := ConsoleAttributeExtractWriter{}
+	writer.Write(vals)
+	return nil
+}
+
+func (rer *RasExtractor) Attributes(input AttributeExtractInput) (map[string]any, error) {
+	vals := make(map[string]any)
+	root, err := rer.f.OpenGroup(input.AttributePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer root.Close()
+
+	for i, v := range input.AttributeNames {
+		err := func() error {
+			if root.AttributeExists(v) {
+				attr, err := root.OpenAttribute(v)
+				if err != nil {
+					return err
+				}
+				defer attr.Close()
+
+				hdf5type, ok := extractorTypeToHdf5Type[input.AttributeTypes[i]]
+				if !ok {
+					return fmt.Errorf("invalid attribute type: %s", input.AttributeTypes[i])
+				}
+
+				switch hdf5type {
+				case hdf5.T_GO_STRING:
+					var attrdata string
+					attr.Read(&attrdata, hdf5type)
+					vals[v] = attrdata
+				case hdf5.T_NATIVE_FLOAT:
+					var attrdata float32
+					attr.Read(&attrdata, hdf5type)
+					vals[v] = attrdata
+				case hdf5.T_NATIVE_DOUBLE:
+					var attrdata float64
+					attr.Read(&attrdata, hdf5type)
+					vals[v] = attrdata
+				case hdf5.T_NATIVE_INT32:
+					var attrdata int32
+					attr.Read(&attrdata, hdf5type)
+					vals[v] = attrdata
+				case hdf5.T_NATIVE_INT64:
+					var attrdata int64
+					attr.Read(&attrdata, hdf5type)
+					vals[v] = attrdata
+				case hdf5.T_NATIVE_INT8:
+					var attrdata int8
+					attr.Read(&attrdata, hdf5type)
+					vals[v] = attrdata
+				case hdf5.T_NATIVE_UINT8:
+					var attrdata uint8
+					attr.Read(&attrdata, hdf5type)
+					vals[v] = attrdata
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return vals, nil
+}
+
+var extractorTypeToHdf5Type map[string]*hdf5.Datatype = map[string]*hdf5.Datatype{
+	"string":  hdf5.T_GO_STRING,
+	"float32": hdf5.T_NATIVE_FLOAT,
+	"float64": hdf5.T_NATIVE_DOUBLE,
+	"int32":   hdf5.T_NATIVE_INT32,
+	"int64":   hdf5.T_NATIVE_INT64,
+	"int8":    hdf5.T_NATIVE_INT8,
+	"uint8":   hdf5.T_NATIVE_UINT8,
 }
