@@ -15,6 +15,7 @@ const (
 	JsonWriter    RasExtractWriterType = "json"
 	CsvWriter     RasExtractWriterType = "csv"
 	EventDbWriter RasExtractWriterType = "eventdb"
+	ByteBuffer    RasExtractWriterType = "bytebuffer"
 )
 
 type RasExtractWriterType string
@@ -319,9 +320,6 @@ func (rw *ConsoleRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
 	return nil
 }
 
-// //////////////////
-// /////////////////
-
 type AttributeExtractWriter interface {
 	Write(vals map[string]any) error
 }
@@ -340,6 +338,7 @@ type AttributeExtractInput struct {
 	AttributeNames []string
 	AttributeTypes []string
 	WriterType     RasExtractWriterType
+	WriteBuffer    []byte
 }
 
 func AttributeExtract(input AttributeExtractInput, filepath string) error {
@@ -364,7 +363,7 @@ func (rer *RasExtractor) Attributes(input AttributeExtractInput) (map[string]any
 	}
 	defer root.Close()
 
-	for i, v := range input.AttributeNames {
+	for _, v := range input.AttributeNames {
 		err := func() error {
 			if root.AttributeExists(v) {
 				attr, err := root.OpenAttribute(v)
@@ -372,42 +371,15 @@ func (rer *RasExtractor) Attributes(input AttributeExtractInput) (map[string]any
 					return err
 				}
 				defer attr.Close()
-
-				hdf5type, ok := extractorTypeToHdf5Type[input.AttributeTypes[i]]
-				if !ok {
-					return fmt.Errorf("invalid attribute type: %s", input.AttributeTypes[i])
+				attrtype := attr.GetType()
+				attrDatatype := &hdf5.Datatype{Identifier: attrtype}
+				attrGoDatatype := attrDatatype.GoType()
+				val := reflect.New(attrGoDatatype)
+				err = attr.Read(val.Interface(), attrDatatype)
+				if err != nil {
+					return fmt.Errorf("unable to read attribute '%s': %s", v, err)
 				}
-
-				switch hdf5type {
-				case hdf5.T_GO_STRING:
-					var attrdata string
-					attr.Read(&attrdata, hdf5type)
-					vals[v] = attrdata
-				case hdf5.T_NATIVE_FLOAT:
-					var attrdata float32
-					attr.Read(&attrdata, hdf5type)
-					vals[v] = attrdata
-				case hdf5.T_NATIVE_DOUBLE:
-					var attrdata float64
-					attr.Read(&attrdata, hdf5type)
-					vals[v] = attrdata
-				case hdf5.T_NATIVE_INT32:
-					var attrdata int32
-					attr.Read(&attrdata, hdf5type)
-					vals[v] = attrdata
-				case hdf5.T_NATIVE_INT64:
-					var attrdata int64
-					attr.Read(&attrdata, hdf5type)
-					vals[v] = attrdata
-				case hdf5.T_NATIVE_INT8:
-					var attrdata int8
-					attr.Read(&attrdata, hdf5type)
-					vals[v] = attrdata
-				case hdf5.T_NATIVE_UINT8:
-					var attrdata uint8
-					attr.Read(&attrdata, hdf5type)
-					vals[v] = attrdata
-				}
+				vals[v] = val.Elem().Interface() //get the value from the pointer
 			}
 			return nil
 		}()
@@ -416,14 +388,4 @@ func (rer *RasExtractor) Attributes(input AttributeExtractInput) (map[string]any
 		}
 	}
 	return vals, nil
-}
-
-var extractorTypeToHdf5Type map[string]*hdf5.Datatype = map[string]*hdf5.Datatype{
-	"string":  hdf5.T_GO_STRING,
-	"float32": hdf5.T_NATIVE_FLOAT,
-	"float64": hdf5.T_NATIVE_DOUBLE,
-	"int32":   hdf5.T_NATIVE_INT32,
-	"int64":   hdf5.T_NATIVE_INT64,
-	"int8":    hdf5.T_NATIVE_INT8,
-	"uint8":   hdf5.T_NATIVE_UINT8,
 }

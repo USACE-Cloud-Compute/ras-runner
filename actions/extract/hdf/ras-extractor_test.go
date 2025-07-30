@@ -189,7 +189,6 @@ func TestAttributeReader(t *testing.T) {
 	input := AttributeExtractInput{
 		AttributePath:  "/Results/Unsteady/Summary",
 		AttributeNames: []string{"Computation Time DSS", "Computation Time Total", "Maximum WSEL Error", "Maximum number of cores"},
-		AttributeTypes: []string{"string", "string", "float32", "int32"},
 		WriterType:     ConsoleWriter,
 	}
 
