@@ -10,3 +10,4 @@ main
 *.hdf
 Muncie.zip
 INSTRUCTIONS
+.env
