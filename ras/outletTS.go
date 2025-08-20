@@ -7,10 +7,13 @@ import (
 	"strings"
 )
 
+const EndOfFlow = " 3.4E+38"
+
 type OutletTS struct {
 	Name       string
 	RowCount   int
 	TimeSeries []FlowData
+	ExtraLines []string
 }
 type FlowData struct {
 	Index float32
@@ -20,24 +23,37 @@ type FlowData struct {
 func InitOutletTS(rows []string) (*OutletTS, error) {
 	name := rows[0][len(TS_OUTFLOW_HEADER):len(rows[0])]
 	output := OutletTS{Name: name}
+	stringLines := make([]string, 0)
 	rowCount, err := strconv.Atoi(strings.TrimLeft(rows[1], " "))
 	if err != nil {
 		return &output, err
 	}
 	output.RowCount = rowCount
 	flowdata := make([]FlowData, rowCount)
+	hasReachedEndOfFlow := false
 	for idx, rowstring := range rows {
 		if idx != 0 && idx != 1 {
-			tmpFlowData, err := parseRowString(rowstring)
-			if err != nil {
-				return &output, err
-			}
-			for jdx, fd := range tmpFlowData {
-				flowdata[(idx-2)*5+jdx] = fd
+			// for multiple dams the last line in the returned block is actually the first line of the incoming block - it has text in it.
+			if hasReachedEndOfFlow {
+				stringLines = append(stringLines, rowstring)
+			} else {
+				if rowstring == EndOfFlow {
+					hasReachedEndOfFlow = true
+					stringLines = append(stringLines, rowstring)
+				} else {
+					tmpFlowData, err := parseRowString(rowstring)
+					if err != nil {
+						return &output, err
+					}
+					for jdx, fd := range tmpFlowData {
+						flowdata[(idx-2)*5+jdx] = fd
+					}
+				}
 			}
 		}
 	}
 	output.TimeSeries = flowdata
+	output.ExtraLines = stringLines
 	return &output, nil
 }
 func parseRowString(rowString string) ([]FlowData, error) {
@@ -101,6 +117,9 @@ func (ots *OutletTS) ToBytes() ([]byte, error) {
 			}
 		}
 		result = append(result, fmt.Sprintf("%s%s", convertFloatToBfileCellValue(float64(fd.Index)), convertFloatToBfileCellValue(float64(fd.Flow)))...) //
+	}
+	for _, r := range ots.ExtraLines {
+		result = append(result, fmt.Sprintf("%s\n", r)...)
 	}
 	//result = append(result, "\n"...)
 	return result, nil
