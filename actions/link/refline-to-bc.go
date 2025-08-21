@@ -31,16 +31,16 @@ func (a *ReflineToBc) Run() error {
 	//dest := a.Action.Attributes["dest"].(map[string]any)["name"].(string)
 	//destdatapath := a.Action.Attributes["dest"].(map[string]any)["datapath"].(string)
 
-	src, err := a.PluginManager.GetInputDataSource("source")
+	src, err := a.Action.IOManager.GetInputDataSource("source")
 	if err != nil {
 		return fmt.Errorf("error getting input source %s: %s", "source", err)
 	}
 
-	srcstore, err := a.PluginManager.GetStore(src.StoreName)
+	srcstore, err := a.Action.IOManager.GetStore(src.StoreName)
 	if err != nil {
 		return fmt.Errorf("error getting input store %s: %s", src.StoreName, err)
 	}
-	dest, err := a.PluginManager.GetOutputDataSource("destination")
+	dest, err := a.Action.IOManager.GetOutputDataSource("destination")
 	if err != nil {
 		return fmt.Errorf("error getting input source %s: %s", "source", err)
 	}
