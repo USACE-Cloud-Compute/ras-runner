@@ -118,9 +118,11 @@ func (ots *OutletTS) ToBytes() ([]byte, error) {
 		}
 		result = append(result, fmt.Sprintf("%s%s", convertFloatToBfileCellValue(float64(fd.Index)), convertFloatToBfileCellValue(float64(fd.Flow)))...) //
 	}
+	result = append(result, "\n"...)
+
 	for _, r := range ots.ExtraLines {
 		result = append(result, fmt.Sprintf("%s\n", r)...)
 	}
-	//result = append(result, "\n"...)
+	//
 	return result, nil
 }

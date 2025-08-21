@@ -201,10 +201,10 @@ func (bf Bfile) Write() ([]byte, error) {
 			return b, err
 		}
 		//switch with a single case is bad form, but I'm gussing we will have more corner cases so I'm using the switch over an if statement
-		switch {
-		case strings.HasPrefix(block.Header(), TS_OUTFLOW_HEADER):
-			blockBytes = append(blockBytes, TS_OUTFLOW_SUFFIX...)
-		}
+		//switch {
+		//case strings.HasPrefix(block.Header(), TS_OUTFLOW_HEADER):
+		//	blockBytes = append(blockBytes, TS_OUTFLOW_SUFFIX...)
+		//}
 		b = append(b, blockBytes...)
 	}
 	return b, nil
