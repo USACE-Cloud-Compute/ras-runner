@@ -26,22 +26,25 @@ func (a *ReflineToBc) Run() error {
 	//@TODO need string length
 	log.Printf("Updating refline to boundary condition %s\n", a.Action.Description)
 	refline := a.Action.Attributes["refline"].(string)
-	srcname := a.Action.Attributes["src"].(map[string]any)["name"].(string)
-	srcdatapath := a.Action.Attributes["src"].(map[string]any)["datapath"].(string)
-	dest := a.Action.Attributes["dest"].(map[string]any)["name"].(string)
-	destdatapath := a.Action.Attributes["dest"].(map[string]any)["datapath"].(string)
+	//srcname := a.Action.Attributes["src"].(map[string]any)["name"].(string)
+	//srcdatapath := a.Action.Attributes["src"].(map[string]any)["datapath"].(string)
+	//dest := a.Action.Attributes["dest"].(map[string]any)["name"].(string)
+	//destdatapath := a.Action.Attributes["dest"].(map[string]any)["datapath"].(string)
 
-	src, err := a.PluginManager.GetInputDataSource(srcname)
+	src, err := a.PluginManager.GetInputDataSource("source")
 	if err != nil {
-		return fmt.Errorf("error getting input source %s: %s", srcname, err)
+		return fmt.Errorf("error getting input source %s: %s", "source", err)
 	}
 
 	srcstore, err := a.PluginManager.GetStore(src.StoreName)
 	if err != nil {
 		return fmt.Errorf("error getting input store %s: %s", src.StoreName, err)
 	}
-
-	err = MigrateRefLineData(src.Paths["0"], srcstore, srcdatapath, dest, destdatapath, refline)
+	dest, err := a.PluginManager.GetOutputDataSource("destination")
+	if err != nil {
+		return fmt.Errorf("error getting input source %s: %s", "source", err)
+	}
+	err = MigrateRefLineData(src.Paths["hdf"], srcstore, src.DataPaths["refline"], dest.Paths["hdf"], dest.DataPaths["bcline"], refline)
 	if err != nil {
 		return fmt.Errorf("failed to migrate refline data: %s", err)
 	}
