@@ -1,10 +1,12 @@
 package hdf
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"github.com/usace/go-hdf5"
 	"github.com/usace/hdf5utils"
@@ -33,12 +35,14 @@ type RasExtractInput struct {
 	Postprocess     []string
 	Colnames        []string
 	ColNamesDataset string
-	ColData         string
-	StringSizes     []int
-	DataType        reflect.Kind
-	WriteData       bool
-	WriteSummary    bool
-	WriterType      RasExtractWriterType
+	//ColData         string
+	StringSizes      []int
+	DataType         reflect.Kind
+	WriteData        bool
+	WriteSummary     bool
+	WriterType       RasExtractWriterType
+	WriteAccumulator WriteAccumulator
+	WriteBlockName   string
 }
 
 type WriteRasDataInput[T RasExtractDataTypes] struct {
@@ -47,6 +51,17 @@ type WriteRasDataInput[T RasExtractDataTypes] struct {
 	Colnames     []string
 	WriteData    bool
 	WriteSummary bool
+}
+
+func getWriter[T RasExtractDataTypes](writertype RasExtractWriterType, writeBlockName string, datasetnum int) (RasDataExtractWriter[T], error) {
+	switch writertype {
+	case ConsoleWriter:
+		return &ConsoleRasExtractWriter[T]{}, nil
+	case JsonWriter:
+		return NewJsonRasExtractWriter[T](writeBlockName, datasetnum)
+	default:
+		return nil, fmt.Errorf("invalid writer type: %s", writertype)
+	}
 }
 
 func DataExtract(input RasExtractInput, filepath string) error {
@@ -87,13 +102,29 @@ func DataExtract(input RasExtractInput, filepath string) error {
 		datasets = []string{input.DataPath}
 	}
 
-	for _, dataset := range datasets {
+	writer, err := getWriter[float32](input.WriterType, input.WriteBlockName, 0)
+	if err != nil {
+		return err
+	}
+
+	//if we are using an accumulator for multiple datasets, write the accoumulator starting tags
+	if input.WriteAccumulator != nil {
+		input.WriteAccumulator.Write(writer.AccumulatorStart(input.WriteBlockName))
+	}
+
+	for i, dataset := range datasets {
 		input.DataPath = dataset
-		err := extractor.RunExtract(input)
+		err := extractor.RunExtract(i, input)
 		if err != nil {
 			return fmt.Errorf("failed to extract dataset: %s due to error %s", dataset, err)
 		}
 	}
+
+	//if we are using an accumulator, write the closing tags
+	if input.WriteAccumulator != nil {
+		input.WriteAccumulator.Write(writer.AccumulatorEnd())
+	}
+
 	return nil
 }
 
@@ -137,7 +168,7 @@ func flattenArray[T any](input [][]T, index int) []T {
 	return out
 }
 
-func (rer *RasExtractor) RunExtract(input RasExtractInput) error {
+func (rer *RasExtractor) RunExtract(datasetnum int, input RasExtractInput) error {
 
 	err := rer.columnNamesPreprocessor(&input)
 	if err != nil {
@@ -151,7 +182,11 @@ func (rer *RasExtractor) RunExtract(input RasExtractInput) error {
 		if err != nil {
 			return err
 		}
-		writer := ConsoleRasExtractWriter[float32]{}
+		writer, err := getWriter[float32](input.WriterType, input.WriteBlockName, datasetnum)
+		if err != nil {
+			return err
+		}
+		//writer := ConsoleRasExtractWriter[float32]{}
 		writer.Write(WriteRasDataInput[float32]{
 			Data:         out,
 			WriteData:    input.WriteData,
@@ -159,6 +194,13 @@ func (rer *RasExtractor) RunExtract(input RasExtractInput) error {
 			Colnames:     input.Colnames,
 			OutputName:   input.DataPath,
 		})
+		if input.WriteAccumulator != nil {
+			data, err := writer.Flush()
+			if err != nil {
+				return err
+			}
+			input.WriteAccumulator.Write(data)
+		}
 
 	}
 	return nil
@@ -278,10 +320,104 @@ func columnMin[T RasExtractDataTypes](data [][]T, col int) T {
 // WRITERS !!!
 // ////////////////
 type RasDataExtractWriter[T RasExtractDataTypes] interface {
-	Write(RasExtractData[T]) error
+	AccumulatorStart(startTag string) []byte
+	AccumulatorEnd() []byte
+	Write(WriteRasDataInput[T]) error
+	Flush() ([]byte, error)
 }
 
+func NewJsonRasExtractWriter[T RasExtractDataTypes](blockName string, datasetnum int) (RasDataExtractWriter[T], error) {
+	writer := JsonRasExtractWriter[T]{blockName: blockName}
+	if datasetnum > 0 {
+		writer.body.WriteString(",")
+	}
+	//writer.body.WriteString(fmt.Sprintf("{\"%s\":", blockName))
+	return &writer, nil
+}
+
+// JSON Writer
+type JsonRasExtractWriter[T RasExtractDataTypes] struct {
+	blockName string
+	body      strings.Builder
+}
+
+func (rw *JsonRasExtractWriter[T]) AccumulatorStart(startTag string) []byte {
+	return []byte(fmt.Sprintf("{\"%s\":[", startTag))
+}
+
+func (rw *JsonRasExtractWriter[T]) AccumulatorEnd() []byte {
+	return []byte("]}")
+}
+
+func (rw *JsonRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
+	builder := strings.Builder{}
+	builder.WriteString("{")
+	builder.WriteString(fmt.Sprintf("\"dataset\":\"%s\",", input.OutputName))
+	if input.WriteData {
+		builder.WriteString("\"columns\":[")
+		for i, colname := range input.Colnames {
+			if i > 0 {
+				builder.WriteString(",")
+			}
+			builder.WriteString(fmt.Sprintf("\"%s\"", colname))
+		}
+		builder.WriteString("],")
+		builder.WriteString("\"data\":[")
+		for j, vals := range input.Data.data {
+			if j > 0 {
+				builder.WriteString(",")
+			}
+			builder.WriteString("[")
+			for k, val := range vals {
+				if k > 0 {
+					builder.WriteString(",")
+				}
+				builder.WriteString(fmt.Sprintf("%v", val))
+			}
+			builder.WriteString("]")
+		}
+		builder.WriteString("]")
+	}
+
+	///////////////////////////////////////
+	//print summaries
+
+	if input.WriteSummary {
+		if input.WriteData {
+			builder.WriteString(",")
+		}
+		builder.WriteString("\"summaries\":")
+		for summaryName, summaryValues := range input.Data.summaries {
+			builder.WriteString(fmt.Sprintf("{\"%s\":{", summaryName))
+			for i, val := range summaryValues {
+				if i > 0 {
+					builder.WriteString(",")
+				}
+				builder.WriteString(fmt.Sprintf("\"%s\":%v", input.Colnames[i], val))
+			}
+			builder.WriteString("}}")
+		}
+	}
+	builder.WriteString("}")
+	rw.body.WriteString(builder.String())
+
+	return nil
+}
+
+func (rw *JsonRasExtractWriter[T]) Flush() ([]byte, error) {
+	return []byte(rw.body.String()), nil
+}
+
+// Console Writer
 type ConsoleRasExtractWriter[T RasExtractDataTypes] struct{}
+
+func (rw *ConsoleRasExtractWriter[T]) AccumulatorStart(startTag string) []byte {
+	return []byte(fmt.Sprintf("-----------starting %s-----------", startTag))
+}
+
+func (rw *ConsoleRasExtractWriter[T]) AccumulatorEnd() []byte {
+	return []byte("-----------finished-----------")
+}
 
 func (rw *ConsoleRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
 
@@ -318,6 +454,10 @@ func (rw *ConsoleRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
 	}
 
 	return nil
+}
+
+func (rw *ConsoleRasExtractWriter[T]) Flush() ([]byte, error) {
+	return nil, nil
 }
 
 type AttributeExtractWriter interface {
@@ -388,4 +528,23 @@ func (rer *RasExtractor) Attributes(input AttributeExtractInput) (map[string]any
 		}
 	}
 	return vals, nil
+}
+
+// /////data accumulator///////////
+type WriteAccumulator interface {
+	Write(data []byte) error
+	Flush() []byte
+}
+
+type ByteBufferWriteAccumulator struct {
+	data bytes.Buffer
+}
+
+func (wa *ByteBufferWriteAccumulator) Write(data []byte) error {
+	_, err := wa.data.Write(data)
+	return err
+}
+
+func (wa *ByteBufferWriteAccumulator) Flush() []byte {
+	return wa.data.Bytes()
 }

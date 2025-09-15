@@ -12,11 +12,6 @@ import (
 	"github.com/usace/cc-go-sdk"
 )
 
-//@TODO fix action description logging back to action.Name
-
-var modelPrefix string
-var event int
-
 func main() {
 	pm, err := cc.InitPluginManager()
 	if err != nil {

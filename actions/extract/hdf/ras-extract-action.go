@@ -1,6 +1,7 @@
 package hdf
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"reflect"
@@ -26,7 +27,7 @@ type RasExtractAction struct {
 
 func (a *RasExtractAction) Run() error {
 
-	TestRasHdfFile := "/mnt/testdata/1/testdata.hdf"
+	TestRasHdfFile := "/workspaces/cc-ras-runner/testData/duwamish-test.hdf"
 
 	colnames, err := a.Action.Attributes.GetStringSlice("colnames")
 	if err != nil {
@@ -40,7 +41,7 @@ func (a *RasExtractAction) Run() error {
 		postprocessing = nil
 	}
 
-	stringSizes, err := a.Action.Attributes.GetIntSlice("stringSizes")
+	stringSizes, err := a.Action.Attributes.GetIntSlice("stringsizes")
 	if err != nil {
 		log.Println("no string sizes found")
 		stringSizes = nil
@@ -48,28 +49,45 @@ func (a *RasExtractAction) Run() error {
 
 	var dt reflect.Kind
 	var ok bool
-	dataType := a.Action.Attributes.GetStringOrFail("dataType")
+	dataType := a.Action.Attributes.GetStringOrFail("datatype")
 	if dt, ok = dataTypeMap[dataType]; !ok {
 		return fmt.Errorf("invalid data type: %s", dataType)
 	}
 
+	outputAccumulator := ByteBufferWriteAccumulator{}
+
 	input := RasExtractInput{
-		DataPath:        a.Action.Attributes.GetStringOrDefault("dataPath", ""),
-		GroupPath:       a.Action.Attributes.GetStringOrDefault("groupPath", ""),
-		GroupSuffix:     a.Action.Attributes.GetStringOrDefault("groupSuffix", ""),
-		MatchPattern:    a.Action.Attributes.GetStringOrDefault("matchPattern", ""),
-		ExcludePattern:  a.Action.Attributes.GetStringOrDefault("excludePattern", ""),
+		DataPath:        a.Action.Attributes.GetStringOrDefault("datapath", ""),
+		GroupPath:       a.Action.Attributes.GetStringOrDefault("grouppath", ""),
+		GroupSuffix:     a.Action.Attributes.GetStringOrDefault("groupsuffix", ""),
+		MatchPattern:    a.Action.Attributes.GetStringOrDefault("match", ""),
+		ExcludePattern:  a.Action.Attributes.GetStringOrDefault("exclude", ""),
 		Postprocess:     postprocessing,
 		Colnames:        colnames,
-		ColNamesDataset: a.Action.Attributes.GetStringOrDefault("colNamesDataset", ""),
-		ColData:         a.Action.Attributes.GetStringOrDefault("coldata", ""),
-		StringSizes:     stringSizes,
-		DataType:        dt,
-		WriteData:       a.Action.Attributes.GetBooleanOrDefault("writedata", false),
-		WriteSummary:    a.Action.Attributes.GetBooleanOrDefault("writeSummary", false),
-		WriterType:      ConsoleWriter,
+		ColNamesDataset: a.Action.Attributes.GetStringOrDefault("coldata", ""),
+		//ColData:         a.Action.Attributes.GetStringOrDefault("coldata", ""),
+		StringSizes:      stringSizes,
+		DataType:         dt,
+		WriteData:        a.Action.Attributes.GetBooleanOrDefault("writedata", false),
+		WriteSummary:     a.Action.Attributes.GetBooleanOrDefault("writesummary", false),
+		WriterType:       JsonWriter,
+		WriteAccumulator: &outputAccumulator,
 	}
 
-	return DataExtract(input, TestRasHdfFile)
+	//return DataExtract(input, TestRasHdfFile)
+	err = DataExtract(input, TestRasHdfFile)
+	if err != nil {
+		return err
+	}
+
+	_, err = a.Action.Put(cc.PutOpInput{
+		SrcReader: bytes.NewReader(outputAccumulator.data.Bytes()),
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: "extractOutputTemplate",
+			PathKey:        "extract",
+		},
+	})
+
+	return err
 
 }
