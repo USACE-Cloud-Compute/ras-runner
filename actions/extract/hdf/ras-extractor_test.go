@@ -51,7 +51,7 @@ func TestReadBcLinePeakJson(t *testing.T) {
 func TestReadReflineLinePeakWaterSurface(t *testing.T) {
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Water Surface",
-		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
+		ColNamesDataset: "refline-peak",
 		Postprocess:     []string{"max"},
 		DataType:        reflect.Float32,
 		WriteSummary:    true,

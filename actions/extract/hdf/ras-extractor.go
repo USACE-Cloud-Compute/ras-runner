@@ -386,17 +386,23 @@ func (rw *JsonRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
 		if input.WriteData {
 			builder.WriteString(",")
 		}
-		builder.WriteString("\"summaries\":")
+		builder.WriteString("\"summaries\": {")
+		mapindex := 0
 		for summaryName, summaryValues := range input.Data.summaries {
-			builder.WriteString(fmt.Sprintf("{\"%s\":{", summaryName))
+			if mapindex > 0 {
+				builder.WriteString(",")
+			}
+			mapindex++
+			builder.WriteString(fmt.Sprintf("\"%s\":{", summaryName))
 			for i, val := range summaryValues {
 				if i > 0 {
 					builder.WriteString(",")
 				}
 				builder.WriteString(fmt.Sprintf("\"%s\":%v", input.Colnames[i], val))
 			}
-			builder.WriteString("}}")
+			builder.WriteString("}")
 		}
+		builder.WriteString("}")
 	}
 	builder.WriteString("}")
 	rw.body.WriteString(builder.String())

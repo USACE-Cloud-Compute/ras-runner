@@ -27,7 +27,13 @@ type RasExtractAction struct {
 
 func (a *RasExtractAction) Run() error {
 
-	TestRasHdfFile := "/workspaces/cc-ras-runner/testData/duwamish-test.hdf"
+	modelResultsPath, err := a.Action.GetAbsolutePath("LOCAL", "rasOutput", "default")
+	if err != nil {
+		log.Printf("missing a LOCAL store/path to the RAS model output")
+		return err
+	}
+
+	blockName := a.Action.Attributes.GetStringOrDefault("block-name", "data")
 
 	colnames, err := a.Action.Attributes.GetStringSlice("colnames")
 	if err != nil {
@@ -70,12 +76,13 @@ func (a *RasExtractAction) Run() error {
 		DataType:         dt,
 		WriteData:        a.Action.Attributes.GetBooleanOrDefault("writedata", false),
 		WriteSummary:     a.Action.Attributes.GetBooleanOrDefault("writesummary", false),
-		WriterType:       JsonWriter,
+		WriterType:       RasExtractWriterType(a.Action.Attributes.GetStringOrDefault("outputformat", "console")),
 		WriteAccumulator: &outputAccumulator,
+		WriteBlockName:   blockName,
 	}
 
 	//return DataExtract(input, TestRasHdfFile)
-	err = DataExtract(input, TestRasHdfFile)
+	err = DataExtract(input, modelResultsPath)
 	if err != nil {
 		return err
 	}
