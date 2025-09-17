@@ -1,16 +1,15 @@
 package hdf
 
 import (
-	"bytes"
 	"fmt"
-	"log"
 	"reflect"
 	"regexp"
-	"strings"
 
 	"github.com/usace/go-hdf5"
 	"github.com/usace/hdf5utils"
 )
+
+type RasExtractWriterType string
 
 const (
 	ConsoleWriter RasExtractWriterType = "console"
@@ -19,8 +18,6 @@ const (
 	EventDbWriter RasExtractWriterType = "eventdb"
 	ByteBuffer    RasExtractWriterType = "bytebuffer"
 )
-
-type RasExtractWriterType string
 
 type RasExtractDataTypes interface {
 	int | int8 | int16 | int32 | int64 | float32 | float64 | string
@@ -35,14 +32,13 @@ type RasExtractInput struct {
 	Postprocess     []string
 	Colnames        []string
 	ColNamesDataset string
-	//ColData         string
-	StringSizes      []int
-	DataType         reflect.Kind
-	WriteData        bool
-	WriteSummary     bool
-	WriterType       RasExtractWriterType
-	WriteAccumulator WriteAccumulator
-	WriteBlockName   string
+	StringSizes     []int
+	DataType        reflect.Kind
+	WriteData       bool
+	WriteSummary    bool
+	WriterType      RasExtractWriterType
+	WriteBlockName  string
+	Accumulate      bool
 }
 
 type WriteRasDataInput[T RasExtractDataTypes] struct {
@@ -102,27 +98,12 @@ func DataExtract(input RasExtractInput, filepath string) error {
 		datasets = []string{input.DataPath}
 	}
 
-	writer, err := getWriter[float32](input.WriterType, input.WriteBlockName, 0)
-	if err != nil {
-		return err
-	}
-
-	//if we are using an accumulator for multiple datasets, write the accoumulator starting tags
-	if input.WriteAccumulator != nil {
-		input.WriteAccumulator.Write(writer.AccumulatorStart(input.WriteBlockName))
-	}
-
 	for i, dataset := range datasets {
 		input.DataPath = dataset
 		err := extractor.RunExtract(i, input)
 		if err != nil {
 			return fmt.Errorf("failed to extract dataset: %s due to error %s", dataset, err)
 		}
-	}
-
-	//if we are using an accumulator, write the closing tags
-	if input.WriteAccumulator != nil {
-		input.WriteAccumulator.Write(writer.AccumulatorEnd())
 	}
 
 	return nil
@@ -186,7 +167,6 @@ func (rer *RasExtractor) RunExtract(datasetnum int, input RasExtractInput) error
 		if err != nil {
 			return err
 		}
-		//writer := ConsoleRasExtractWriter[float32]{}
 		writer.Write(WriteRasDataInput[float32]{
 			Data:         out,
 			WriteData:    input.WriteData,
@@ -194,14 +174,6 @@ func (rer *RasExtractor) RunExtract(datasetnum int, input RasExtractInput) error
 			Colnames:     input.Colnames,
 			OutputName:   input.DataPath,
 		})
-		if input.WriteAccumulator != nil {
-			data, err := writer.Flush()
-			if err != nil {
-				return err
-			}
-			input.WriteAccumulator.Write(data)
-		}
-
 	}
 	return nil
 }
@@ -314,243 +286,4 @@ func columnMin[T RasExtractDataTypes](data [][]T, col int) T {
 		}
 	}
 	return minVal
-}
-
-// ////////////////
-// WRITERS !!!
-// ////////////////
-type RasDataExtractWriter[T RasExtractDataTypes] interface {
-	AccumulatorStart(startTag string) []byte
-	AccumulatorEnd() []byte
-	Write(WriteRasDataInput[T]) error
-	Flush() ([]byte, error)
-}
-
-func NewJsonRasExtractWriter[T RasExtractDataTypes](blockName string, datasetnum int) (RasDataExtractWriter[T], error) {
-	writer := JsonRasExtractWriter[T]{blockName: blockName}
-	if datasetnum > 0 {
-		writer.body.WriteString(",")
-	}
-	//writer.body.WriteString(fmt.Sprintf("{\"%s\":", blockName))
-	return &writer, nil
-}
-
-// JSON Writer
-type JsonRasExtractWriter[T RasExtractDataTypes] struct {
-	blockName string
-	body      strings.Builder
-}
-
-func (rw *JsonRasExtractWriter[T]) AccumulatorStart(startTag string) []byte {
-	return []byte(fmt.Sprintf("{\"%s\":[", startTag))
-}
-
-func (rw *JsonRasExtractWriter[T]) AccumulatorEnd() []byte {
-	return []byte("]}")
-}
-
-func (rw *JsonRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
-	builder := strings.Builder{}
-	builder.WriteString("{")
-	builder.WriteString(fmt.Sprintf("\"dataset\":\"%s\",", input.OutputName))
-	if input.WriteData {
-		builder.WriteString("\"columns\":[")
-		for i, colname := range input.Colnames {
-			if i > 0 {
-				builder.WriteString(",")
-			}
-			builder.WriteString(fmt.Sprintf("\"%s\"", colname))
-		}
-		builder.WriteString("],")
-		builder.WriteString("\"data\":[")
-		for j, vals := range input.Data.data {
-			if j > 0 {
-				builder.WriteString(",")
-			}
-			builder.WriteString("[")
-			for k, val := range vals {
-				if k > 0 {
-					builder.WriteString(",")
-				}
-				builder.WriteString(fmt.Sprintf("%v", val))
-			}
-			builder.WriteString("]")
-		}
-		builder.WriteString("]")
-	}
-
-	///////////////////////////////////////
-	//print summaries
-
-	if input.WriteSummary {
-		if input.WriteData {
-			builder.WriteString(",")
-		}
-		builder.WriteString("\"summaries\": {")
-		mapindex := 0
-		for summaryName, summaryValues := range input.Data.summaries {
-			if mapindex > 0 {
-				builder.WriteString(",")
-			}
-			mapindex++
-			builder.WriteString(fmt.Sprintf("\"%s\":{", summaryName))
-			for i, val := range summaryValues {
-				if i > 0 {
-					builder.WriteString(",")
-				}
-				builder.WriteString(fmt.Sprintf("\"%s\":%v", input.Colnames[i], val))
-			}
-			builder.WriteString("}")
-		}
-		builder.WriteString("}")
-	}
-	builder.WriteString("}")
-	rw.body.WriteString(builder.String())
-
-	return nil
-}
-
-func (rw *JsonRasExtractWriter[T]) Flush() ([]byte, error) {
-	return []byte(rw.body.String()), nil
-}
-
-// Console Writer
-type ConsoleRasExtractWriter[T RasExtractDataTypes] struct{}
-
-func (rw *ConsoleRasExtractWriter[T]) AccumulatorStart(startTag string) []byte {
-	return []byte(fmt.Sprintf("-----------starting %s-----------", startTag))
-}
-
-func (rw *ConsoleRasExtractWriter[T]) AccumulatorEnd() []byte {
-	return []byte("-----------finished-----------")
-}
-
-func (rw *ConsoleRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
-
-	//print data
-	fmt.Println(input.OutputName)
-	if input.WriteData {
-		for _, colname := range input.Colnames {
-			fmt.Printf("%-20s", colname)
-		}
-		fmt.Println()
-		for _, vals := range input.Data.data {
-			for _, val := range vals {
-				fmt.Printf("%-20v", val)
-			}
-			fmt.Println()
-		}
-	}
-
-	//print summaries
-	if input.WriteSummary {
-		fmt.Printf("%-10s", "summary")
-		for _, colname := range input.Colnames {
-			fmt.Printf("%-20s", colname)
-		}
-		fmt.Println()
-
-		for summaryName, summaryValues := range input.Data.summaries {
-			fmt.Printf("%-10s", summaryName)
-			for _, val := range summaryValues {
-				fmt.Printf("%-20v", val)
-			}
-			fmt.Println()
-		}
-	}
-
-	return nil
-}
-
-func (rw *ConsoleRasExtractWriter[T]) Flush() ([]byte, error) {
-	return nil, nil
-}
-
-type AttributeExtractWriter interface {
-	Write(vals map[string]any) error
-}
-
-type ConsoleAttributeExtractWriter struct{}
-
-func (cw *ConsoleAttributeExtractWriter) Write(vals map[string]any) error {
-	for k, v := range vals {
-		fmt.Printf("%s::%v\n", k, v)
-	}
-	return nil
-}
-
-type AttributeExtractInput struct {
-	AttributePath  string
-	AttributeNames []string
-	AttributeTypes []string
-	WriterType     RasExtractWriterType
-	WriteBuffer    []byte
-}
-
-func AttributeExtract(input AttributeExtractInput, filepath string) error {
-	extractor, err := NewRasExtractor(filepath)
-	if err != nil {
-		return err
-	}
-	vals, err := extractor.Attributes(input)
-	if err != nil {
-		return err
-	}
-	writer := ConsoleAttributeExtractWriter{}
-	writer.Write(vals)
-	return nil
-}
-
-func (rer *RasExtractor) Attributes(input AttributeExtractInput) (map[string]any, error) {
-	vals := make(map[string]any)
-	root, err := rer.f.OpenGroup(input.AttributePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer root.Close()
-
-	for _, v := range input.AttributeNames {
-		err := func() error {
-			if root.AttributeExists(v) {
-				attr, err := root.OpenAttribute(v)
-				if err != nil {
-					return err
-				}
-				defer attr.Close()
-				attrtype := attr.GetType()
-				attrDatatype := &hdf5.Datatype{Identifier: attrtype}
-				attrGoDatatype := attrDatatype.GoType()
-				val := reflect.New(attrGoDatatype)
-				err = attr.Read(val.Interface(), attrDatatype)
-				if err != nil {
-					return fmt.Errorf("unable to read attribute '%s': %s", v, err)
-				}
-				vals[v] = val.Elem().Interface() //get the value from the pointer
-			}
-			return nil
-		}()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return vals, nil
-}
-
-// /////data accumulator///////////
-type WriteAccumulator interface {
-	Write(data []byte) error
-	Flush() []byte
-}
-
-type ByteBufferWriteAccumulator struct {
-	data bytes.Buffer
-}
-
-func (wa *ByteBufferWriteAccumulator) Write(data []byte) error {
-	_, err := wa.data.Write(data)
-	return err
-}
-
-func (wa *ByteBufferWriteAccumulator) Flush() []byte {
-	return wa.data.Bytes()
 }

@@ -1,13 +1,12 @@
 package hdf
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 )
 
 const (
-	TestRasHdfFile string = "/workspaces/cc-ras-runner/testData/duwamish-test.hdf"
+	TestRasHdfFile string = "/workspaces/cc-ras-runner/testData/Duwamish_17110013.p01.hdf"
 )
 
 func TestReadBcLinePeak(t *testing.T) {
@@ -29,23 +28,23 @@ func TestReadBcLinePeak(t *testing.T) {
 
 func TestReadBcLinePeakJson(t *testing.T) {
 	input := RasExtractInput{
-		GroupPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions",
-		Colnames:         []string{"stage", "flow"},
-		Postprocess:      []string{"max"},
-		ExcludePattern:   "Flow per Face|Stage per Face|Flow per Cell",
-		DataType:         reflect.Float32,
-		WriteSummary:     true,
-		WriteData:        true,
-		WriterType:       JsonWriter,
-		WriteAccumulator: &ByteBufferWriteAccumulator{},
-		WriteBlockName:   "boundary-condition-lines",
+		GroupPath:      "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions",
+		Colnames:       []string{"stage", "flow"},
+		Postprocess:    []string{"max"},
+		ExcludePattern: "Flow per Face|Stage per Face|Flow per Cell",
+		DataType:       reflect.Float32,
+		WriteSummary:   true,
+		WriteData:      true,
+		WriterType:     JsonWriter,
+		//WriteAccumulator: &ByteBufferWriteAccumulator{},
+		WriteBlockName: "boundary-condition-lines",
 	}
 
 	err := DataExtract(input, TestRasHdfFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(string(input.WriteAccumulator.Flush()))
+	//fmt.Println(string(input.WriteAccumulator.Flush()))
 }
 
 func TestReadReflineLinePeakWaterSurface(t *testing.T) {

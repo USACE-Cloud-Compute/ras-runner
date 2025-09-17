@@ -2,6 +2,7 @@ package hdf
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
@@ -60,8 +61,6 @@ func (a *RasExtractAction) Run() error {
 		return fmt.Errorf("invalid data type: %s", dataType)
 	}
 
-	outputAccumulator := ByteBufferWriteAccumulator{}
-
 	input := RasExtractInput{
 		DataPath:        a.Action.Attributes.GetStringOrDefault("datapath", ""),
 		GroupPath:       a.Action.Attributes.GetStringOrDefault("grouppath", ""),
@@ -71,30 +70,37 @@ func (a *RasExtractAction) Run() error {
 		Postprocess:     postprocessing,
 		Colnames:        colnames,
 		ColNamesDataset: a.Action.Attributes.GetStringOrDefault("coldata", ""),
-		//ColData:         a.Action.Attributes.GetStringOrDefault("coldata", ""),
-		StringSizes:      stringSizes,
-		DataType:         dt,
-		WriteData:        a.Action.Attributes.GetBooleanOrDefault("writedata", false),
-		WriteSummary:     a.Action.Attributes.GetBooleanOrDefault("writesummary", false),
-		WriterType:       RasExtractWriterType(a.Action.Attributes.GetStringOrDefault("outputformat", "console")),
-		WriteAccumulator: &outputAccumulator,
-		WriteBlockName:   blockName,
+		StringSizes:     stringSizes,
+		DataType:        dt,
+		WriteData:       a.Action.Attributes.GetBooleanOrDefault("writedata", false),
+		WriteSummary:    a.Action.Attributes.GetBooleanOrDefault("writesummary", false),
+		WriterType:      RasExtractWriterType(a.Action.Attributes.GetStringOrDefault("outputformat", "console")),
+		WriteBlockName:  blockName,
+		Accumulate:      a.Action.Attributes.GetBooleanOrDefault("accumulate-results", false),
 	}
 
-	//return DataExtract(input, TestRasHdfFile)
 	err = DataExtract(input, modelResultsPath)
 	if err != nil {
 		return err
 	}
 
-	_, err = a.Action.Put(cc.PutOpInput{
-		SrcReader: bytes.NewReader(outputAccumulator.data.Bytes()),
-		DataSourceOpInput: cc.DataSourceOpInput{
-			DataSourceName: "extractOutputTemplate",
-			PathKey:        "extract",
-		},
-	})
-
-	return err
-
+	if input.Accumulate {
+		//do nothing
+		return nil
+	} else {
+		json, err := json.Marshal(&writerAccumulator)
+		if err != nil {
+			return err
+		}
+		_, err = a.Action.Put(cc.PutOpInput{
+			SrcReader: bytes.NewReader(json),
+			DataSourceOpInput: cc.DataSourceOpInput{
+				DataSourceName: "extractOutputTemplate",
+				PathKey:        "extract",
+			},
+		})
+		//reset accumulator
+		writerAccumulator = make(map[string][]map[string]any)
+		return err
+	}
 }
