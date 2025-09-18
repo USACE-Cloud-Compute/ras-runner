@@ -4,13 +4,13 @@ go 1.23
 
 toolchain go1.23.10
 
-replace github.com/usace/hdf5utils => /workspaces/hdf5utils
+//replace github.com/usace/hdf5utils => /workspaces/hdf5utils
 //replace github.com/usace/cc-go-sdk => /workspaces/cc-go-sdk
 
 require (
-	github.com/usace/cc-go-sdk v0.0.0-20250708142539-ab413ab1d306
+	github.com/usace/cc-go-sdk v0.0.0-20250916200307-2e0479aec7c8
 	github.com/usace/go-hdf5 v0.0.0-20230626152743-72d0ae21fd0c
-	github.com/usace/hdf5utils v0.0.0-20230731192430-e48a18481e69
+	github.com/usace/hdf5utils v0.0.0-20250725185139-31b507b8c9a0
 )
 
 require (

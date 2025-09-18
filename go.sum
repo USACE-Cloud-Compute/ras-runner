@@ -120,6 +120,8 @@ github.com/usace/cc-go-sdk v0.0.0-20250701115303-082ae1903538 h1:8sUapdryC+342Ly
 github.com/usace/cc-go-sdk v0.0.0-20250701115303-082ae1903538/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
 github.com/usace/cc-go-sdk v0.0.0-20250708142539-ab413ab1d306 h1:GGWp7VmXxszMWg6z1byjkp0crXRemk/SVIIGuwwjBnE=
 github.com/usace/cc-go-sdk v0.0.0-20250708142539-ab413ab1d306/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
+github.com/usace/cc-go-sdk v0.0.0-20250916200307-2e0479aec7c8 h1:YvU6hDNxHGvKzQtnGSehxvs8RjM28UFsQdRcTtUSUeg=
+github.com/usace/cc-go-sdk v0.0.0-20250916200307-2e0479aec7c8/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
 github.com/usace/filesapi v0.0.0-20240105190612-7968d4f3fe61 h1:5XBnZbJhmbRfBfhUqMzqkRIOkzbEp6MhDKsj7SK7tIk=
 github.com/usace/filesapi v0.0.0-20240105190612-7968d4f3fe61/go.mod h1:n93SV2TkqTZQvaxEmraFCSMUDTbPVyc2uc8q+UTp9Q8=
 github.com/usace/filesapi v0.0.0-20240315200543-841da1a812a3 h1:P7gZPn+X0+qacIxzA+MRyDtzAN2kMopWKYWfytvt2iw=
@@ -133,6 +135,8 @@ github.com/usace/go-hdf5 v0.0.0-20230626152743-72d0ae21fd0c h1:JIbvPaU9Z+3Z7tFye
 github.com/usace/go-hdf5 v0.0.0-20230626152743-72d0ae21fd0c/go.mod h1:7UnGKc/bXuT03VYfEx/Od6Jq0zmBMoH0jEVMESxnyLg=
 github.com/usace/hdf5utils v0.0.0-20230731192430-e48a18481e69 h1:d1Ko0VOge9VTC1BZvSpPg75zUPNBDMmH67iiiC0btgc=
 github.com/usace/hdf5utils v0.0.0-20230731192430-e48a18481e69/go.mod h1:+dMO5KnQ3XKqNi2WPJPyiXdu6nIzm4Lo7FgYVk1Psx0=
+github.com/usace/hdf5utils v0.0.0-20250725185139-31b507b8c9a0 h1:FFOVHVL06Ctbmxyq25wqMuSUNgApDXjiBz3HN4HjEMw=
+github.com/usace/hdf5utils v0.0.0-20250725185139-31b507b8c9a0/go.mod h1:qu3Lu/dihV5aVldiYyzFLC2Ep2PkHjQToRvTdJVg3/c=
 github.com/wk8/go-ordered-map/v2 v2.1.8 h1:5h/BUHu93oj4gIdvHHHGsScSTMijfx5PeYkE/fJgbpc=
 github.com/wk8/go-ordered-map/v2 v2.1.8/go.mod h1:5nJHM5DyteebpVlHnWMV0rPz6Zp7+xBAnxjb1X5vnTw=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
