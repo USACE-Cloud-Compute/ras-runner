@@ -128,7 +128,7 @@ func TestReadRefpointMinVelocity(t *testing.T) {
 func TestReadRefpointMinWaterSurface(t *testing.T) {
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Water Surface",
-		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
+		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Name",
 		Postprocess:     []string{"min"},
 		DataType:        reflect.Float32,
 		WriteSummary:    true,
@@ -144,11 +144,12 @@ func TestReadRefpointMinWaterSurface(t *testing.T) {
 func TestReadRefpointPeakVelocity(t *testing.T) {
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Velocity",
-		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
+		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Name",
 		Postprocess:     []string{"max"},
 		DataType:        reflect.Float32,
 		WriteSummary:    true,
-		WriterType:      ConsoleWriter,
+		WriterType:      JsonWriter,
+		ColSize:         40,
 	}
 
 	err := DataExtract(input, TestRasHdfFile)
