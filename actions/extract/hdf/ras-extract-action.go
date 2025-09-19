@@ -7,6 +7,8 @@ import (
 	"log"
 	"reflect"
 
+	"ras-runner/actions"
+
 	"github.com/usace/cc-go-sdk"
 )
 
@@ -28,11 +30,16 @@ type RasExtractAction struct {
 
 func (a *RasExtractAction) Run() error {
 
-	modelResultsPath, err := a.Action.GetAbsolutePath("LOCAL", "rasOutput", "default")
-	if err != nil {
-		log.Printf("missing a LOCAL store/path to the RAS model output")
-		return err
-	}
+	// modelResultsPath, err := a.Action.GetAbsolutePath("LOCAL", "rasOutput", "default")
+	// if err != nil {
+	// 	log.Printf("missing a LOCAL store/path to the RAS model output")
+	// 	return err
+	// }
+
+	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR,
+		a.PluginManager.Attributes.GetStringOrFail("modelPrefix"),
+		a.PluginManager.Attributes.GetStringOrFail("plan"),
+	)
 
 	blockName := a.Action.Attributes.GetStringOrDefault("block-name", "data")
 
@@ -64,8 +71,8 @@ func (a *RasExtractAction) Run() error {
 		Postprocess:     postprocessing,
 		Colnames:        colnames,
 		ColNamesDataset: a.Action.Attributes.GetStringOrDefault("coldata", ""),
-		ColSize:         a.Action.Attributes.GetIntOrDefault("colsize", 0),
-		StringSizes:     stringSizes,
+		//ColSize:         a.Action.Attributes.GetIntOrDefault("colsize", 0),
+		StringSizes: stringSizes,
 		//DataType:        dt,
 		WriteData:      a.Action.Attributes.GetBooleanOrDefault("writedata", false),
 		WriteSummary:   a.Action.Attributes.GetBooleanOrDefault("writesummary", false),
@@ -87,6 +94,7 @@ func (a *RasExtractAction) Run() error {
 			AttributeNames: input.Colnames,
 			WriteBlockName: input.WriteBlockName,
 		}
+
 		err := AttributeExtract(aeinput, modelResultsPath)
 		if err != nil {
 			return err
@@ -100,7 +108,23 @@ func (a *RasExtractAction) Run() error {
 			return fmt.Errorf("invalid data type: %s", dataType)
 		}
 		input.DataType = dt
-		err = DataExtract(input, modelResultsPath)
+		switch dt {
+		case reflect.Float32:
+			err = DataExtract[float32](input, modelResultsPath)
+		case reflect.Float64:
+			err = DataExtract[float64](input, modelResultsPath)
+		case reflect.Int:
+			err = DataExtract[int](input, modelResultsPath)
+		case reflect.Int8:
+			err = DataExtract[int8](input, modelResultsPath)
+		case reflect.Int16:
+			err = DataExtract[int16](input, modelResultsPath)
+		case reflect.Int32:
+			err = DataExtract[int32](input, modelResultsPath)
+		case reflect.Int64:
+			err = DataExtract[int64](input, modelResultsPath)
+		}
+
 		if err != nil {
 			return err
 		}
@@ -114,10 +138,11 @@ func (a *RasExtractAction) Run() error {
 		if err != nil {
 			return err
 		}
+		outputDataSource := a.Action.Attributes.GetStringOrFail("outputDataSource")
 		_, err = a.Action.Put(cc.PutOpInput{
 			SrcReader: bytes.NewReader(json),
 			DataSourceOpInput: cc.DataSourceOpInput{
-				DataSourceName: "extractOutputTemplate",
+				DataSourceName: outputDataSource,
 				PathKey:        "extract",
 			},
 		})
