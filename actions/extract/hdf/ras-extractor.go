@@ -2,6 +2,7 @@ package hdf
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"path"
 	"reflect"
@@ -112,7 +113,8 @@ func DataExtract[T RasExtractDataTypes](input RasExtractInput, filepath string) 
 		input.DataPath = dataset
 		err := extractor.RunExtract(i, input)
 		if err != nil {
-			return fmt.Errorf("failed to extract dataset: %s due to error %s", dataset, err)
+			log.Printf("failed to extract dataset: %s due to error %s\n", dataset, err)
+			//return fmt.Errorf("failed to extract dataset: %s due to error %s", dataset, err)
 		}
 	}
 
@@ -166,36 +168,34 @@ func (rer *RasExtractor[T]) RunExtract(datasetnum int, input RasExtractInput) er
 		return err
 	}
 
-	switch input.DataType {
-	case reflect.Float32:
-		reader := RasExtractorReader[T]{rer.f}
-		out, err := reader.Read(input)
-		if err != nil {
-			return err
-		}
-		writer, err := getWriter[T](input.WriterType, input.WriteBlockName, datasetnum)
-		if err != nil {
-			return err
-		}
-
-		//set the output name to the dataset path.  later will we extract the path base for naming the dataset block
-		outputName := input.DataPath
-		datasetName := ""
-		if len(input.datasetNames) > 0 {
-			datasetName = input.datasetNames[datasetnum]
-		} else {
-			datasetName = path.Base(input.DataPath)
-		}
-
-		writer.Write(WriteRasDataInput[T]{
-			Data:         out,
-			WriteData:    input.WriteData,
-			WriteSummary: input.WriteSummary,
-			Colnames:     input.Colnames,
-			OutputName:   outputName,
-			datasetName:  datasetName,
-		})
+	reader := RasExtractorReader[T]{rer.f}
+	out, err := reader.Read(input)
+	if err != nil {
+		return err
 	}
+	writer, err := getWriter[T](input.WriterType, input.WriteBlockName, datasetnum)
+	if err != nil {
+		return err
+	}
+
+	//set the output name to the dataset path.  later will we extract the path base for naming the dataset block
+	outputName := input.DataPath
+	datasetName := ""
+	if len(input.datasetNames) > 0 {
+		datasetName = input.datasetNames[datasetnum]
+	} else {
+		datasetName = path.Base(input.DataPath)
+	}
+
+	writer.Write(WriteRasDataInput[T]{
+		Data:         out,
+		WriteData:    input.WriteData,
+		WriteSummary: input.WriteSummary,
+		Colnames:     input.Colnames,
+		OutputName:   outputName,
+		datasetName:  datasetName,
+	})
+
 	return nil
 }
 
@@ -302,6 +302,8 @@ func AttributeExtract(input AttributeExtractInput, filepath string) error {
 	if err != nil {
 		return err
 	}
+
+	//@TODO use the proper writer!!!!!!!!!!!!!!!!!!!!!!!!
 	//writer := ConsoleAttributeExtractWriter{}
 	writer, err := NewJsonAttributeExtractor(input.WriteBlockName, input.AttributePath)
 	if err != nil {
@@ -310,24 +312,6 @@ func AttributeExtract(input AttributeExtractInput, filepath string) error {
 	writer.Write(vals)
 	return nil
 }
-
-// func AttributeExtract[T RasExtractDataTypes](input AttributeExtractInput, filepath string) error {
-// 	extractor, err := NewRasExtractor[T](filepath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	vals, err := extractor.Attributes(input)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	//writer := ConsoleAttributeExtractWriter{}
-// 	writer, err := NewJsonAttributeExtractor(input.WriteBlockName, input.AttributePath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	writer.Write(vals)
-// 	return nil
-// }
 
 func (rer *RasExtractor[T]) Attributes(input AttributeExtractInput) (map[string]any, error) {
 	vals := make(map[string]any)

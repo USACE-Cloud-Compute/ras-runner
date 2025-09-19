@@ -1,7 +1,9 @@
 package hdf
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
 )
 
 type RasExtractWriterAction string
@@ -22,10 +24,11 @@ var writerAccumulator map[string][]map[string]any = make(map[string][]map[string
 // JSON writer
 // =============================================================================
 type RasExtractorOutputBlock[T RasExtractDataTypes] struct {
-	Dataset        string            `json:"dataset"`
-	Columns        []string          `json:"columns"`
-	Data           [][]T             `json:"data,omitempty"`
-	Summaries      map[string][]T    `json:"summaries,omitempty"`
+	Dataset string   `json:"dataset"`
+	Columns []string `json:"columns"`
+	//Data           [][]T             `json:"data,omitempty"`
+	Data           NaNSafeMatrix[T]  `json:"data,omitempty"`
+	Summaries      map[string][]any  `json:"summaries,omitempty"`
 	RasExtractData RasExtractData[T] `json:"-"`
 }
 
@@ -50,19 +53,29 @@ func (rw *JsonRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
 	}
 
 	if input.WriteSummary {
-		summaries := make(map[string][]T)
+		summaries := make(map[string][]any)
 		for summaryname, vals := range input.Data.summaries {
-			summaries[summaryname] = vals
+			nanSafeVals := make([]any, len(vals))
+			for i, val := range vals {
+				switch vval := any(val).(type) {
+				case float64:
+					if math.IsNaN(vval) {
+						nanSafeVals[i] = nil
+					} else {
+						nanSafeVals[i] = vval
+					}
+				case float32:
+					if math.IsNaN(float64(vval)) {
+						nanSafeVals[i] = nil
+					} else {
+						nanSafeVals[i] = vval
+					}
+				}
+			}
+			summaries[summaryname] = nanSafeVals
 		}
 		block.Summaries = summaries
 	}
-
-	// var outputname string
-	// if input.datasetName != "" {
-	// 	outputname = input.datasetName
-	// } else {
-	// 	outputname = path.Base(input.OutputName)
-	// }
 
 	//adds a new extract to a block section
 	writerAccumulator[rw.blockName] = append(writerAccumulator[rw.blockName], map[string]any{input.datasetName: block})
@@ -102,6 +115,41 @@ func (jw *JsonAttributeExtractWriter) Write(vals map[string]any) error {
 	databox[0] = data
 	writerAccumulator[jw.blockname] = []map[string]any{{"attributes": JsonAttrOutputBlock{Columns: cols, Data: databox, Dataset: jw.dataset}}}
 	return nil
+}
+
+type NaNSafeMatrix[T RasExtractDataTypes] [][]T
+
+func NewSafeMatrix[T RasExtractDataTypes](matrix [][]T) NaNSafeMatrix[T] {
+	return NaNSafeMatrix[T](matrix)
+}
+
+func (m NaNSafeMatrix[T]) MarshalJSON() ([]byte, error) {
+
+	result := make([][]interface{}, len(m))
+
+	for i, row := range m {
+		result[i] = make([]interface{}, len(row))
+		for j, v := range row {
+			switch val := any(v).(type) {
+			case float32:
+				if math.IsNaN(float64(val)) {
+					result[i][j] = nil
+				} else {
+					result[i][j] = val
+				}
+			case float64:
+				if math.IsNaN(val) {
+					result[i][j] = nil
+				} else {
+					result[i][j] = val
+				}
+			default:
+				result[i][j] = val
+			}
+		}
+	}
+
+	return json.Marshal(result)
 }
 
 // =============================================================================

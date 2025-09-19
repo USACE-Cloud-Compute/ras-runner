@@ -150,9 +150,9 @@ func readBcLinePeak(input ReadBcLinePeakInput) (io.Reader, error) {
 	return reader, nil
 }
 
-type Number interface {
-	int | int8 | int16 | int32 | int64 | float32 | float64
-}
+// type Number interface {
+// 	int | int8 | int16 | int32 | int64 | float32 | float64
+// }
 
 func sliceMax[T Number](data []T) T {
 	maxVal := data[0]

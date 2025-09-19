@@ -134,6 +134,7 @@ func (a *RasExtractAction) Run() error {
 		//do nothing
 		return nil
 	} else {
+		//refer to ras-extractor-writers for the writerAccumulator
 		json, err := json.Marshal(&writerAccumulator)
 		if err != nil {
 			return err
