@@ -192,7 +192,7 @@ func getattr(ds *hdf5.Dataset, attrname string, dest any) error {
 /////////////////////////////////////////////////////////////////
 
 type BreachRecord struct {
-	Event                     int
+	Event                     string
 	FlowArea2D                string
 	SaConn                    string
 	Breached                  bool
@@ -223,7 +223,7 @@ var recordHeaders []string = []string{
 	"BreachProgressionDuration",
 }
 
-func GetBreachRecord(event int, flowarea2d string, connectionname string, bd *BreachData) BreachRecord {
+func GetBreachRecord(event string, flowarea2d string, connectionname string, bd *BreachData) BreachRecord {
 	br := BreachRecord{}
 	br.FlowArea2D = flowarea2d
 	br.SaConn = connectionname
@@ -311,7 +311,7 @@ func NewCsvBreachRecordWriter(csvPath string) (*CsvBreachRecordWriter, error) {
 }
 
 func (cbw *CsvBreachRecordWriter) Write(r BreachRecord) error {
-	row := fmt.Sprintf("%d,%s,%s,%v,%f,%d,%f,%f,%f,%f,%f,%f,%f\n",
+	row := fmt.Sprintf("%s,%s,%s,%v,%f,%d,%f,%f,%f,%f,%f,%f,%f\n",
 		r.Event,
 		r.FlowArea2D,
 		r.SaConn,

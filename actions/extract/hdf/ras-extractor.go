@@ -87,14 +87,18 @@ func DataExtract[T RasExtractDataTypes](input RasExtractInput, filepath string) 
 		for _, dsname := range datasetNames {
 			var include bool
 
-			if input.MatchPattern != "" {
-				re := regexp.MustCompile(input.MatchPattern)
-				include = re.MatchString(dsname)
-			} else if input.ExcludePattern != "" {
-				re := regexp.MustCompile(input.ExcludePattern)
-				include = !re.MatchString(dsname)
-			} else {
+			if input.MatchPattern == "" && input.ExcludePattern == "" {
 				include = true
+			} else {
+				if input.MatchPattern != "" {
+					re := regexp.MustCompile(input.MatchPattern)
+					include = re.MatchString(dsname)
+				}
+
+				if input.ExcludePattern != "" {
+					re := regexp.MustCompile(input.ExcludePattern)
+					include = !re.MatchString(dsname)
+				}
 			}
 
 			if include {

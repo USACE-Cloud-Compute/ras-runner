@@ -3,11 +3,18 @@ package hdf
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math"
 	"reflect"
 
+	"ras-runner/actions"
+
 	"github.com/usace/cc-go-sdk"
+)
+
+const (
+	breachLocationField string = "SaConn"
 )
 
 func init() {
@@ -20,9 +27,15 @@ type RasBreachExtractAction struct {
 
 func (a *RasBreachExtractAction) Run() error {
 	/////////////////
-	event := 1
-	rb, err := NewRasBreachData("/sim/model/bardwell-creek.p01.hdf")
+	//event := 1
 	//////////////
+
+	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR,
+		a.PluginManager.Attributes.GetStringOrFail("modelPrefix"),
+		a.PluginManager.Attributes.GetStringOrFail("plan"),
+	)
+
+	rb, err := NewRasBreachData(modelResultsPath)
 	if err != nil {
 		return err
 	}
@@ -44,13 +57,13 @@ func (a *RasBreachExtractAction) Run() error {
 			if err != nil {
 				log.Printf("No breach configuration for %s\n", connectionName)
 			} else {
-				br := GetBreachRecord(event, flowarea2d, connectionName, &bd)
+				br := GetBreachRecord(a.PluginManager.EventIdentifier, flowarea2d, connectionName, &bd)
 				breachRecords = append(breachRecords, br)
 			}
 		}
 	}
 
-	writer := JsonBreachDataExtractWriter{}
+	writer := JsonBreachDataExtractWriter{blockname: "breach_records"}
 	writer.Write(breachRecords)
 
 	json, err := json.Marshal(&writerAccumulator)
@@ -76,9 +89,16 @@ type JsonBreachDataExtractWriter struct {
 	blockname string
 }
 
-func (JsonBreachDataExtractWriter) Write(recs []BreachRecord) error {
+func (writer JsonBreachDataExtractWriter) Write(recs []BreachRecord) error {
 	jsonRecs := breachRecordsToJsonAccumulatorMap(recs)
-	writerAccumulator["breach-records"] = append(writerAccumulator["breach-records"], jsonRecs...)
+	for _, br := range jsonRecs {
+		datasetName := br[breachLocationField]
+		dataset := fmt.Sprintf(breachPathTemplate, datasetName.(string))
+		outputBlock := RasExtractorOutputBlock[float32]{Dataset: dataset, Record: br}
+		writerAccumulator[writer.blockname] = append(writerAccumulator[writer.blockname], map[string]any{datasetName.(string): outputBlock})
+	}
+	//outputblock:=RasExtractorOutputBlock[float32]{Dataset: }
+	//writerAccumulator[writer.blockname] = append(writerAccumulator["breach-records"], jsonRecs...)
 	return nil
 }
 

@@ -30,12 +30,6 @@ type RasExtractAction struct {
 
 func (a *RasExtractAction) Run() error {
 
-	// modelResultsPath, err := a.Action.GetAbsolutePath("LOCAL", "rasOutput", "default")
-	// if err != nil {
-	// 	log.Printf("missing a LOCAL store/path to the RAS model output")
-	// 	return err
-	// }
-
 	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR,
 		a.PluginManager.Attributes.GetStringOrFail("modelPrefix"),
 		a.PluginManager.Attributes.GetStringOrFail("plan"),
