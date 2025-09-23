@@ -31,8 +31,8 @@ type RasExtractAction struct {
 func (a *RasExtractAction) Run() error {
 
 	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR,
-		a.PluginManager.Attributes.GetStringOrFail("modelPrefix"),
-		a.PluginManager.Attributes.GetStringOrFail("plan"),
+		a.Action.Attributes.GetStringOrFail("modelPrefix"),
+		a.Action.Attributes.GetStringOrFail("plan"),
 	)
 
 	blockName := a.Action.Attributes.GetStringOrDefault("block-name", "data")
