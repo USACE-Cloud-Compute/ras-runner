@@ -30,10 +30,21 @@ type RasExtractAction struct {
 
 func (a *RasExtractAction) Run() error {
 
-	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR,
-		a.Action.Attributes.GetStringOrFail("modelPrefix"),
-		a.Action.Attributes.GetStringOrFail("plan"),
-	)
+	var modelPrefix string
+	var plan string
+	var err error
+
+	modelPrefix, err = a.Action.Attributes.GetString("modelPrefix")
+	if err != nil {
+		modelPrefix = a.PluginManager.Attributes.GetStringOrFail("modelPrefix")
+	}
+
+	plan, err = a.Action.Attributes.GetString("plan")
+	if err != nil {
+		plan = a.PluginManager.Attributes.GetStringOrFail("plan")
+	}
+
+	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR, modelPrefix, plan)
 
 	blockName := a.Action.Attributes.GetStringOrDefault("block-name", "data")
 

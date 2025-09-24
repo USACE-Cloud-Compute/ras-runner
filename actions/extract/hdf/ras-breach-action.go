@@ -26,14 +26,21 @@ type RasBreachExtractAction struct {
 }
 
 func (a *RasBreachExtractAction) Run() error {
-	/////////////////
-	//event := 1
-	//////////////
+	var modelPrefix string
+	var plan string
+	var err error
 
-	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR,
-		a.Action.Attributes.GetStringOrFail("modelPrefix"),
-		a.Action.Attributes.GetStringOrFail("plan"),
-	)
+	modelPrefix, err = a.Action.Attributes.GetString("modelPrefix")
+	if err != nil {
+		modelPrefix = a.PluginManager.Attributes.GetStringOrFail("modelPrefix")
+	}
+
+	plan, err = a.Action.Attributes.GetString("plan")
+	if err != nil {
+		plan = a.PluginManager.Attributes.GetStringOrFail("plan")
+	}
+
+	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR, modelPrefix, plan)
 
 	rb, err := NewRasBreachData(modelResultsPath)
 	if err != nil {
@@ -50,13 +57,15 @@ func (a *RasBreachExtractAction) Run() error {
 	for _, flowarea2d := range flowAreas {
 		connectionNames, err := rb.ConnectionNames(flowarea2d)
 		if err != nil {
-			return err
+			log.Printf("WARNING: no or invalid 2D Hyd Conn datasets for %s\n", flowarea2d)
+			continue
 		}
 		for _, connectionName := range connectionNames {
 			bd, err := rb.BreachData(flowarea2d, connectionName)
 			if err != nil {
 				log.Printf("No breach configuration for %s\n", connectionName)
 			} else {
+				log.Printf("Processing breach configuration for %s\n", connectionName)
 				br := GetBreachRecord(a.PluginManager.EventIdentifier, flowarea2d, connectionName, &bd)
 				breachRecords = append(breachRecords, br)
 			}

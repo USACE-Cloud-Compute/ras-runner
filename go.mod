@@ -5,16 +5,16 @@ go 1.23
 toolchain go1.23.10
 
 //replace github.com/usace/hdf5utils => /workspaces/hdf5utils
+
 //replace github.com/usace/cc-go-sdk => /workspaces/cc-go-sdk
 
 require (
-	github.com/usace/cc-go-sdk v0.0.0-20250916200307-2e0479aec7c8
-	github.com/usace/go-hdf5 v0.0.0-20230626152743-72d0ae21fd0c
-	github.com/usace/hdf5utils v0.0.0-20250725185139-31b507b8c9a0
+	github.com/usace/cc-go-sdk v0.0.0-20250922162017-983c330e2209
+	github.com/usace/go-hdf5 v0.0.0-20250905114727-9cd0fd2d5ff7
+	github.com/usace/hdf5utils v0.0.0-20250919115646-33cb8997d656
 )
 
 require (
-	github.com/aws/aws-sdk-go v1.50.14 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.36.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.27.11 // indirect
@@ -38,12 +38,10 @@ require (
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
-	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/usace/filesapi v0.0.0-20250320132414-61c781325b9a // indirect
-	github.com/usace/filestore v0.0.0-20230309205740-49d6e1f06e4a // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
