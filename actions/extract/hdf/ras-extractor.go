@@ -3,12 +3,16 @@ package hdf
 import (
 	"fmt"
 	"log"
+	"math"
+	"path"
 	"reflect"
 	"regexp"
 
 	"github.com/usace/go-hdf5"
 	"github.com/usace/hdf5utils"
 )
+
+type RasExtractWriterType string
 
 const (
 	ConsoleWriter RasExtractWriterType = "console"
@@ -18,14 +22,13 @@ const (
 	ByteBuffer    RasExtractWriterType = "bytebuffer"
 )
 
-type RasExtractWriterType string
-
 type RasExtractDataTypes interface {
 	int | int8 | int16 | int32 | int64 | float32 | float64 | string
 }
 
 type RasExtractInput struct {
 	DataPath        string
+	Attributes      bool
 	GroupPath       string //for group reads....
 	GroupSuffix     string
 	MatchPattern    string
@@ -33,12 +36,15 @@ type RasExtractInput struct {
 	Postprocess     []string
 	Colnames        []string
 	ColNamesDataset string
-	ColData         string
-	StringSizes     []int
-	DataType        reflect.Kind
-	WriteData       bool
-	WriteSummary    bool
-	WriterType      RasExtractWriterType
+	//ColSize         int
+	StringSizes    []int
+	DataType       reflect.Kind
+	WriteData      bool
+	WriteSummary   bool
+	WriterType     RasExtractWriterType
+	WriteBlockName string
+	Accumulate     bool
+	datasetNames   []string //private field to hold group names
 }
 
 type WriteRasDataInput[T RasExtractDataTypes] struct {
@@ -47,10 +53,25 @@ type WriteRasDataInput[T RasExtractDataTypes] struct {
 	Colnames     []string
 	WriteData    bool
 	WriteSummary bool
+	datasetName  string
 }
 
-func DataExtract(input RasExtractInput, filepath string) error {
-	extractor, err := NewRasExtractor(filepath)
+func getWriter[T RasExtractDataTypes](writertype RasExtractWriterType, writeBlockName string, datasetnum int) (RasDataExtractWriter[T], error) {
+	switch writertype {
+	case ConsoleWriter:
+		return &ConsoleRasExtractWriter[T]{}, nil
+	case JsonWriter:
+		return NewJsonRasExtractWriter[T](writeBlockName, datasetnum)
+	default:
+		return nil, fmt.Errorf("invalid writer type: %s", writertype)
+	}
+}
+
+// =============================================================================
+// Data Extract
+// =============================================================================
+func DataExtract[T RasExtractDataTypes](input RasExtractInput, filepath string) error {
+	extractor, err := NewRasExtractor[T](filepath)
 	if err != nil {
 		return err
 	}
@@ -58,6 +79,7 @@ func DataExtract(input RasExtractInput, filepath string) error {
 	var datasets []string
 	if input.GroupPath != "" {
 		datasetNames, err := extractor.GroupMembers(input.GroupPath)
+		input.datasetNames = datasetNames
 		if err != nil {
 			return fmt.Errorf("unable to read hdf5 group objects: %s", err)
 		}
@@ -65,14 +87,18 @@ func DataExtract(input RasExtractInput, filepath string) error {
 		for _, dsname := range datasetNames {
 			var include bool
 
-			if input.MatchPattern != "" {
-				re := regexp.MustCompile(input.MatchPattern)
-				include = re.MatchString(dsname)
-			} else if input.ExcludePattern != "" {
-				re := regexp.MustCompile(input.ExcludePattern)
-				include = !re.MatchString(dsname)
-			} else {
+			if input.MatchPattern == "" && input.ExcludePattern == "" {
 				include = true
+			} else {
+				if input.MatchPattern != "" {
+					re := regexp.MustCompile(input.MatchPattern)
+					include = re.MatchString(dsname)
+				}
+
+				if input.ExcludePattern != "" {
+					re := regexp.MustCompile(input.ExcludePattern)
+					include = !re.MatchString(dsname)
+				}
 			}
 
 			if include {
@@ -87,27 +113,29 @@ func DataExtract(input RasExtractInput, filepath string) error {
 		datasets = []string{input.DataPath}
 	}
 
-	for _, dataset := range datasets {
+	for i, dataset := range datasets {
 		input.DataPath = dataset
-		err := extractor.RunExtract(input)
+		err := extractor.RunExtract(i, input)
 		if err != nil {
-			return fmt.Errorf("failed to extract dataset: %s due to error %s", dataset, err)
+			log.Printf("failed to extract dataset: %s due to error %s\n", dataset, err)
+			//return fmt.Errorf("failed to extract dataset: %s due to error %s", dataset, err)
 		}
 	}
+
 	return nil
 }
 
-func NewRasExtractor(filepath string) (*RasExtractor, error) {
-	extractor := RasExtractor{}
+func NewRasExtractor[T RasExtractDataTypes](filepath string) (*RasExtractor[T], error) {
+	extractor := RasExtractor[T]{}
 	err := extractor.open(filepath)
 	return &extractor, err
 }
 
-type RasExtractor struct {
+type RasExtractor[T RasExtractDataTypes] struct {
 	f *hdf5.File
 }
 
-func (rer *RasExtractor) open(filepath string) error {
+func (rer *RasExtractor[T]) open(filepath string) error {
 	f, err := hdf5utils.OpenFile(filepath)
 	if err != nil {
 		return err
@@ -116,11 +144,11 @@ func (rer *RasExtractor) open(filepath string) error {
 	return nil
 }
 
-func (rer *RasExtractor) Close() error {
+func (rer *RasExtractor[T]) Close() error {
 	return rer.f.Close()
 }
 
-func (rer *RasExtractor) GroupMembers(groupPath string) ([]string, error) {
+func (rer *RasExtractor[T]) GroupMembers(groupPath string) ([]string, error) {
 	group, err := hdf5utils.NewHdfGroup(rer.f, groupPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read the hdf group '%s': %s", groupPath, err)
@@ -137,39 +165,55 @@ func flattenArray[T any](input [][]T, index int) []T {
 	return out
 }
 
-func (rer *RasExtractor) RunExtract(input RasExtractInput) error {
+func (rer *RasExtractor[T]) RunExtract(datasetnum int, input RasExtractInput) error {
 
 	err := rer.columnNamesPreprocessor(&input)
 	if err != nil {
 		return err
 	}
 
-	switch input.DataType {
-	case reflect.Float32:
-		reader := RasExtractorReader[float32]{rer.f}
-		out, err := reader.Read(input)
-		if err != nil {
-			return err
-		}
-		writer := ConsoleRasExtractWriter[float32]{}
-		writer.Write(WriteRasDataInput[float32]{
-			Data:         out,
-			WriteData:    input.WriteData,
-			WriteSummary: input.WriteSummary,
-			Colnames:     input.Colnames,
-			OutputName:   input.DataPath,
-		})
-
+	reader := RasExtractorReader[T]{rer.f}
+	out, err := reader.Read(input)
+	if err != nil {
+		return err
 	}
+	writer, err := getWriter[T](input.WriterType, input.WriteBlockName, datasetnum)
+	if err != nil {
+		return err
+	}
+
+	//set the output name to the dataset path.  later will we extract the path base for naming the dataset block
+	outputName := input.DataPath
+	datasetName := ""
+	if len(input.datasetNames) > 0 {
+		datasetName = input.datasetNames[datasetnum]
+	} else {
+		datasetName = path.Base(input.DataPath)
+	}
+
+	writer.Write(WriteRasDataInput[T]{
+		Data:         out,
+		WriteData:    input.WriteData,
+		WriteSummary: input.WriteSummary,
+		Colnames:     input.Colnames,
+		OutputName:   outputName,
+		datasetName:  datasetName,
+	})
+
 	return nil
 }
 
-func (rer *RasExtractor) columnNamesPreprocessor(input *RasExtractInput) error {
+func (rer *RasExtractor[T]) columnNamesPreprocessor(input *RasExtractInput) error {
 	if input.ColNamesDataset != "" {
+		//get string size for the column
+		attr, err := hdf5utils.GetAttrMetadata(rer.f, hdf5utils.DatasetMetadata, input.ColNamesDataset, "")
+		if err != nil {
+			return fmt.Errorf("unable to read metadata for %s: %s", input.ColNamesDataset, err)
+		}
 		colreader := RasExtractorReader[string]{rer.f}
 		cols, err := colreader.ReadArray(RasExtractInput{
 			DataPath:    input.ColNamesDataset,
-			StringSizes: []int{36},
+			StringSizes: []int{int(attr.AttrSize)},
 		})
 		if err != nil {
 			return err
@@ -241,6 +285,89 @@ func (rr *RasExtractorReader[T]) ReadArray(input RasExtractInput) ([][]T, error)
 	return toSlice[T](dataSet)
 }
 
+// =============================================================================
+// Attribute Extract
+// =============================================================================
+type AttributeExtractInput struct {
+	AttributePath  string
+	AttributeNames []string
+	WriterType     RasExtractWriterType
+	WriteBlockName string
+}
+
+func AttributeExtract(input AttributeExtractInput, filepath string) error {
+	//@TODO type is irrelevant here.  Probably should make this a completely separate type of extractor
+	//. and not reuse the RasExtractor[T]
+	extractor, err := NewRasExtractor[int](filepath)
+	if err != nil {
+		return err
+	}
+	vals, err := extractor.Attributes(input)
+	if err != nil {
+		return err
+	}
+
+	//@TODO use the proper writer!!!!!!!!!!!!!!!!!!!!!!!!
+	//writer := ConsoleAttributeExtractWriter{}
+	writer, err := NewJsonAttributeExtractor(input.WriteBlockName, input.AttributePath)
+	if err != nil {
+		return err
+	}
+	writer.Write(vals)
+	return nil
+}
+
+func (rer *RasExtractor[T]) Attributes(input AttributeExtractInput) (map[string]any, error) {
+	vals := make(map[string]any)
+	root, err := rer.f.OpenGroup(input.AttributePath)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+
+	for _, v := range input.AttributeNames {
+		err := func() error {
+			if root.AttributeExists(v) {
+				attr, err := root.OpenAttribute(v)
+				if err != nil {
+					return err
+				}
+				defer attr.Close()
+				attrtype := attr.GetType()
+				attrDatatype := &hdf5.Datatype{Identifier: attrtype}
+				attrGoDatatype := attrDatatype.GoType()
+				val := reflect.New(attrGoDatatype)
+				err = attr.Read(val.Interface(), attrDatatype)
+				if err != nil {
+					return fmt.Errorf("unable to read attribute '%s': %s", v, err)
+				}
+				if isValueNaN(val.Elem()) { //val is a pointer, so get the elem for a NaN check
+					vals[v] = nil
+				} else {
+					vals[v] = val.Elem().Interface() //get the value from the pointer
+				}
+			}
+			return nil
+		}()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return vals, nil
+}
+
+// =============================================================================
+// Utility functions
+// =============================================================================
+
+func isValueNaN(value reflect.Value) bool {
+	switch value.Kind() {
+	case reflect.Float32, reflect.Float64:
+		return math.IsNaN(value.Float())
+	}
+	return false
+}
+
 func toSlice[T any](dataset *hdf5utils.HdfDataset) ([][]T, error) {
 	rows := make([][]T, dataset.Rows())
 	for i := range rows {
@@ -272,120 +399,4 @@ func columnMin[T RasExtractDataTypes](data [][]T, col int) T {
 		}
 	}
 	return minVal
-}
-
-// ////////////////
-// WRITERS !!!
-// ////////////////
-type RasDataExtractWriter[T RasExtractDataTypes] interface {
-	Write(RasExtractData[T]) error
-}
-
-type ConsoleRasExtractWriter[T RasExtractDataTypes] struct{}
-
-func (rw *ConsoleRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
-
-	//print data
-	fmt.Println(input.OutputName)
-	if input.WriteData {
-		for _, colname := range input.Colnames {
-			fmt.Printf("%-20s", colname)
-		}
-		fmt.Println()
-		for _, vals := range input.Data.data {
-			for _, val := range vals {
-				fmt.Printf("%-20v", val)
-			}
-			fmt.Println()
-		}
-	}
-
-	//print summaries
-	if input.WriteSummary {
-		fmt.Printf("%-10s", "summary")
-		for _, colname := range input.Colnames {
-			fmt.Printf("%-20s", colname)
-		}
-		fmt.Println()
-
-		for summaryName, summaryValues := range input.Data.summaries {
-			fmt.Printf("%-10s", summaryName)
-			for _, val := range summaryValues {
-				fmt.Printf("%-20v", val)
-			}
-			fmt.Println()
-		}
-	}
-
-	return nil
-}
-
-type AttributeExtractWriter interface {
-	Write(vals map[string]any) error
-}
-
-type ConsoleAttributeExtractWriter struct{}
-
-func (cw *ConsoleAttributeExtractWriter) Write(vals map[string]any) error {
-	for k, v := range vals {
-		fmt.Printf("%s::%v\n", k, v)
-	}
-	return nil
-}
-
-type AttributeExtractInput struct {
-	AttributePath  string
-	AttributeNames []string
-	AttributeTypes []string
-	WriterType     RasExtractWriterType
-	WriteBuffer    []byte
-}
-
-func AttributeExtract(input AttributeExtractInput, filepath string) error {
-	extractor, err := NewRasExtractor(filepath)
-	if err != nil {
-		return err
-	}
-	vals, err := extractor.Attributes(input)
-	if err != nil {
-		return err
-	}
-	writer := ConsoleAttributeExtractWriter{}
-	writer.Write(vals)
-	return nil
-}
-
-func (rer *RasExtractor) Attributes(input AttributeExtractInput) (map[string]any, error) {
-	vals := make(map[string]any)
-	root, err := rer.f.OpenGroup(input.AttributePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer root.Close()
-
-	for _, v := range input.AttributeNames {
-		err := func() error {
-			if root.AttributeExists(v) {
-				attr, err := root.OpenAttribute(v)
-				if err != nil {
-					return err
-				}
-				defer attr.Close()
-				attrtype := attr.GetType()
-				attrDatatype := &hdf5.Datatype{Identifier: attrtype}
-				attrGoDatatype := attrDatatype.GoType()
-				val := reflect.New(attrGoDatatype)
-				err = attr.Read(val.Interface(), attrDatatype)
-				if err != nil {
-					return fmt.Errorf("unable to read attribute '%s': %s", v, err)
-				}
-				vals[v] = val.Elem().Interface() //get the value from the pointer
-			}
-			return nil
-		}()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return vals, nil
 }

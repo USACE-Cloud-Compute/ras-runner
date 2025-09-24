@@ -51,10 +51,10 @@ func (a UnsteadySimulationAction) Run() error {
 
 	log.Printf("Running model %s\n", a.Action.Description)
 	simcmd := fmt.Sprintf("%s/%s", scriptPath, actions.MODEL_SCRIPT)
-	log.Printf("Running model script: %s %s %s %s %s\n", simcmd, actions.MODEL_DIR, modelPrefix, geom, plan)
-	cmdout, err := exec.Command(simcmd, actions.MODEL_DIR, modelPrefix, geom, plan).CombinedOutput()
+	log.Printf("Running model script: %s %s %s %s %s\n", simcmd, actions.MODEL_DIR, modelPrefix, plan, geom)
+	cmdout, err := exec.Command(simcmd, actions.MODEL_DIR, modelPrefix, plan, geom).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to tun: %s", err)
+		return fmt.Errorf("failed to run: %s", err)
 	}
 	// grab any log information and write to output location before dealing with any errors
 	out.Write([]byte("---------- RAS Model Output --------------"))

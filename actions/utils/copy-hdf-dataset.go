@@ -16,6 +16,10 @@ func init() {
 	cc.ActionRegistry.RegisterAction("copy-hdf", &CopyHdfDatasetAction{})
 }
 
+/*
+	copies content of one hdf5 data file into another one that is local
+*/
+
 type CopyHdfDatasetAction struct {
 	cc.ActionRunnerBase
 }

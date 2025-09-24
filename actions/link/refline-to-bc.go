@@ -55,11 +55,20 @@ func (a *ReflineToBc) Run() error {
 }
 
 func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, refline string) error {
+	// if srcstore.StoreType == "S3" {
+	// 	profile := srcstore.DsProfile
+	// 	bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
+	// 	template := os.Getenv("HDF_AWS_S3_TEMPLATE")
+	// 	//src = fmt.Sprintf(actions.S3BucketTemplate, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
+	// }
+
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
-		src = fmt.Sprintf(actions.S3BucketTemplate, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
+		template := os.Getenv("HDF_AWS_S3_TEMPLATE")
+		src = fmt.Sprintf(template, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
 	}
+
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
 	if err != nil {
 		return err
@@ -89,12 +98,19 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 	defer refLineVals.Close()
 
 	//get the reference line positions
+	mt := hdf5utils.DatasetMetadata
+	attr, err := hdf5utils.GetAttrMetadata(srcfile, mt, src_datapath+"/Name", "")
+	if err != nil {
+		return err
+	}
+
 	refLineNames, err := hdf5utils.NewHdfDataset(src_datapath+"/Name", hdf5utils.HdfReadOptions{
 		Dtype:        reflect.String,
-		Strsizes:     hdf5utils.NewHdfStrSet(43),
+		Strsizes:     hdf5utils.NewHdfStrSet(int(attr.AttrSize)),
 		File:         srcfile,
 		ReadOnCreate: true,
 	})
+
 	if err != nil {
 		return err
 	}
