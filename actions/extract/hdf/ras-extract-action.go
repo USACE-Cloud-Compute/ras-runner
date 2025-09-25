@@ -28,6 +28,23 @@ type RasExtractAction struct {
 	cc.ActionRunnerBase
 }
 
+// Run executes the RAS extraction action based on configured attributes.
+//
+// It supports three main extraction modes:
+// 1. Dataset Extraction: Extracts a specific dataset from the HDF5 file.
+// 2. Group Extraction: Enumerates datasets within an HDF5 group and extracts them.
+// 3. Attribute Extraction: Extracts attributes from datasets or groups.
+//
+// The action reads configuration parameters such as data paths, output formats,
+// data types, and processing options to determine how to extract and format the data.
+//
+// It handles both immediate writing of results and accumulation for later writing
+// based on the 'accumulate-results' attribute.
+//
+// If 'accumulate-results' is true, the extracted data is stored in an accumulator
+// and can be written later using the specified 'outputDataSource'.
+//
+// Returns an error if configuration is invalid or extraction fails.
 func (a *RasExtractAction) Run() error {
 
 	var modelPrefix string

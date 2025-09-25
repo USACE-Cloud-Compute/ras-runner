@@ -12,50 +12,108 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+/*
+ras extractor provides functionality for extracting data from HEC-RAS HDF5 files.
+
+It implements extraction capabilities for RAS model outputs stored in HDF5 format and supports three main extraction methods:
+1. Dataset Extraction: Extracts a specific dataset from the HDF5 file
+2. Group Extraction: Enumerates datasets within an HDF5 group and extracts them
+3. Attribute Extraction: Extracts attributes from datasets or groups
+
+The extractor provides generic functions for data extraction that work with various data types,
+including numeric and string data. It supports post-processing operations such as calculating
+maximum and minimum values for extracted data columns.
+
+Key components:
+- RasExtractInput: Configuration structure for extraction parameters
+- RasExtractData: Container for extracted data and summaries
+- RasExtractor: Main extractor struct that handles HDF5 file operations
+- Various writer implementations for different output formats
+
+Supported data types include:
+- int, int8, int16, int32, int64
+- float32, float64
+- string
+
+The extractor integrates with the cc-go-sdk for action execution and supports
+accumulation of results for later writing to data sources.
+*/
+
 type RasExtractWriterType string
 
 const (
+	// ConsoleWriter writes output to console (STDOUT)
 	ConsoleWriter RasExtractWriterType = "console"
-	JsonWriter    RasExtractWriterType = "json"
-	CsvWriter     RasExtractWriterType = "csv"
+	// JsonWriter writes output to JSON format
+	JsonWriter RasExtractWriterType = "json"
+	// CsvWriter writes output to CSV format
+	CsvWriter RasExtractWriterType = "csv"
+	// EventDbWriter writes output to event database
 	EventDbWriter RasExtractWriterType = "eventdb"
-	ByteBuffer    RasExtractWriterType = "bytebuffer"
+	// ByteBuffer writes output to byte buffer
+	ByteBuffer RasExtractWriterType = "bytebuffer"
 )
 
+// RasExtractDataTypes is a type constraint for supported data types in extraction
 type RasExtractDataTypes interface {
 	int | int8 | int16 | int32 | int64 | float32 | float64 | string
 }
 
+// RasExtractInput defines the configuration for data extraction operations
 type RasExtractInput struct {
-	DataPath        string
-	Attributes      bool
-	GroupPath       string //for group reads....
-	GroupSuffix     string
-	MatchPattern    string
-	ExcludePattern  string
-	Postprocess     []string
-	Colnames        []string
+	// DataPath is the path to the dataset within the HDF5 file
+	DataPath string
+	// Attributes indicates whether to extract attributes instead of data
+	Attributes bool
+	// GroupPath is the path to an HDF5 group whose datasets will be extracted
+	GroupPath string //for group reads....
+	// GroupSuffix is optional suffix appended to each group object path during reading
+	GroupSuffix string
+	// MatchPattern is a regular expression to select specific dataset objects within the group
+	MatchPattern string
+	// ExcludePattern is a regular expression to filter out unwanted dataset objects from selection
+	ExcludePattern string
+	// Postprocess defines post-processing operations (e.g., "max", "min") for summary calculations
+	Postprocess []string
+	// Colnames defines column names for the extracted data
+	Colnames []string
+	// ColNamesDataset is path to a dataset containing column names
 	ColNamesDataset string
-	//ColSize         int
-	StringSizes    []int
-	DataType       reflect.Kind
-	WriteData      bool
-	WriteSummary   bool
-	WriterType     RasExtractWriterType
-	WriteBlockName string
-	Accumulate     bool
-	datasetNames   []string //private field to hold group names
-}
-
-type WriteRasDataInput[T RasExtractDataTypes] struct {
-	Data         *RasExtractData[T]
-	OutputName   string
-	Colnames     []string
-	WriteData    bool
+	// StringSizes defines sizes for string datasets when reading
+	StringSizes []int
+	// DataType is the reflect.Kind of the data type to extract
+	DataType reflect.Kind
+	// WriteData indicates whether to write the raw extracted data
+	WriteData bool
+	// WriteSummary indicates whether to calculate and write summary statistics
 	WriteSummary bool
-	datasetName  string
+	// WriterType specifies the output format (console, json, etc.)
+	WriterType RasExtractWriterType
+	// WriteBlockName is the name used for identifying the block in output
+	WriteBlockName string
+	// Accumulate indicates whether to accumulate results rather than write immediately
+	Accumulate bool
+	// datasetNames is private field to hold group names during extraction
+	datasetNames []string
 }
 
+// WriteRasDataInput defines the configuration for writing extracted data
+type WriteRasDataInput[T RasExtractDataTypes] struct {
+	// Data contains the extracted data and summaries
+	Data *RasExtractData[T]
+	// OutputName is the name/path of the dataset being written
+	OutputName string
+	// Colnames are the column names for the data
+	Colnames []string
+	// WriteData indicates whether to write raw data
+	WriteData bool
+	// WriteSummary indicates whether to write summary statistics
+	WriteSummary bool
+	// datasetName is internal field storing the dataset name
+	datasetName string
+}
+
+// getWriter returns a writer instance based on the specified writer type
 func getWriter[T RasExtractDataTypes](writertype RasExtractWriterType, writeBlockName string, datasetnum int) (RasDataExtractWriter[T], error) {
 	switch writertype {
 	case ConsoleWriter:
@@ -70,6 +128,7 @@ func getWriter[T RasExtractDataTypes](writertype RasExtractWriterType, writeBloc
 // =============================================================================
 // Data Extract
 // =============================================================================
+// DataExtract performs data extraction from an HDF5 file based on the provided input configuration
 func DataExtract[T RasExtractDataTypes](input RasExtractInput, filepath string) error {
 	extractor, err := NewRasExtractor[T](filepath)
 	if err != nil {
@@ -125,16 +184,19 @@ func DataExtract[T RasExtractDataTypes](input RasExtractInput, filepath string) 
 	return nil
 }
 
+// NewRasExtractor creates a new RasExtractor instance for the specified file path
 func NewRasExtractor[T RasExtractDataTypes](filepath string) (*RasExtractor[T], error) {
 	extractor := RasExtractor[T]{}
 	err := extractor.open(filepath)
 	return &extractor, err
 }
 
+// RasExtractor handles HDF5 file operations for data extraction
 type RasExtractor[T RasExtractDataTypes] struct {
 	f *hdf5.File
 }
 
+// open opens an HDF5 file for reading
 func (rer *RasExtractor[T]) open(filepath string) error {
 	f, err := hdf5utils.OpenFile(filepath)
 	if err != nil {
@@ -144,10 +206,12 @@ func (rer *RasExtractor[T]) open(filepath string) error {
 	return nil
 }
 
+// Close closes the underlying HDF5 file
 func (rer *RasExtractor[T]) Close() error {
 	return rer.f.Close()
 }
 
+// GroupMembers returns the names of objects within a specified group path
 func (rer *RasExtractor[T]) GroupMembers(groupPath string) ([]string, error) {
 	group, err := hdf5utils.NewHdfGroup(rer.f, groupPath)
 	if err != nil {
@@ -157,6 +221,7 @@ func (rer *RasExtractor[T]) GroupMembers(groupPath string) ([]string, error) {
 	return group.ObjectNames()
 }
 
+// flattenArray converts a 2D array by transposing rows to columns
 func flattenArray[T any](input [][]T, index int) []T {
 	out := make([]T, len(input))
 	for i, v := range input {
@@ -165,6 +230,7 @@ func flattenArray[T any](input [][]T, index int) []T {
 	return out
 }
 
+// RunExtract executes the extraction process for a single dataset or group
 func (rer *RasExtractor[T]) RunExtract(datasetnum int, input RasExtractInput) error {
 
 	err := rer.columnNamesPreprocessor(&input)
@@ -203,6 +269,7 @@ func (rer *RasExtractor[T]) RunExtract(datasetnum int, input RasExtractInput) er
 	return nil
 }
 
+// columnNamesPreprocessor handles processing of column names from datasets or direct values
 func (rer *RasExtractor[T]) columnNamesPreprocessor(input *RasExtractInput) error {
 	if input.ColNamesDataset != "" {
 		//get string size for the column
@@ -224,15 +291,20 @@ func (rer *RasExtractor[T]) columnNamesPreprocessor(input *RasExtractInput) erro
 	return nil
 }
 
+// RasExtractorReader handles reading data from HDF5 datasets
 type RasExtractorReader[T RasExtractDataTypes] struct {
 	f *hdf5.File
 }
 
+// RasExtractData holds the extracted data and summary statistics
 type RasExtractData[T RasExtractDataTypes] struct {
-	data      [][]T
+	// data contains the raw extracted data
+	data [][]T
+	// summaries contains calculated summary statistics for each column
 	summaries map[string][]T
 }
 
+// Read performs data extraction with optional post-processing
 func (rr *RasExtractorReader[T]) Read(input RasExtractInput) (*RasExtractData[T], error) {
 
 	data, err := rr.ReadArray(input)
@@ -264,6 +336,7 @@ func (rr *RasExtractorReader[T]) Read(input RasExtractInput) (*RasExtractData[T]
 	return &output, nil
 }
 
+// ReadArray reads data from an HDF5 dataset into a 2D slice
 func (rr *RasExtractorReader[T]) ReadArray(input RasExtractInput) ([][]T, error) {
 	var strSet hdf5utils.HdfStrSet
 
@@ -288,13 +361,20 @@ func (rr *RasExtractorReader[T]) ReadArray(input RasExtractInput) ([][]T, error)
 // =============================================================================
 // Attribute Extract
 // =============================================================================
+
+// AttributeExtractInput defines the configuration for attribute extraction
 type AttributeExtractInput struct {
-	AttributePath  string
+	// AttributePath is the path to the object whose attributes are extracted
+	AttributePath string
+	// AttributeNames is a list of attribute names to extract
 	AttributeNames []string
-	WriterType     RasExtractWriterType
+	// WriterType specifies the output format for attributes
+	WriterType RasExtractWriterType
+	// WriteBlockName is the name used for identifying the block in output
 	WriteBlockName string
 }
 
+// AttributeExtract extracts attributes from an HDF5 file based on the provided input configuration
 func AttributeExtract(input AttributeExtractInput, filepath string) error {
 	//@TODO type is irrelevant here.  Probably should make this a completely separate type of extractor
 	//. and not reuse the RasExtractor[T]
@@ -317,6 +397,7 @@ func AttributeExtract(input AttributeExtractInput, filepath string) error {
 	return nil
 }
 
+// Attributes extracts attributes from a specified path in the HDF5 file
 func (rer *RasExtractor[T]) Attributes(input AttributeExtractInput) (map[string]any, error) {
 	vals := make(map[string]any)
 	root, err := rer.f.OpenGroup(input.AttributePath)
@@ -360,6 +441,7 @@ func (rer *RasExtractor[T]) Attributes(input AttributeExtractInput) (map[string]
 // Utility functions
 // =============================================================================
 
+// isValueNaN checks if a reflect.Value represents NaN (for floating point types)
 func isValueNaN(value reflect.Value) bool {
 	switch value.Kind() {
 	case reflect.Float32, reflect.Float64:
@@ -368,6 +450,7 @@ func isValueNaN(value reflect.Value) bool {
 	return false
 }
 
+// toSlice converts an HDF5 dataset to a 2D slice of type T
 func toSlice[T any](dataset *hdf5utils.HdfDataset) ([][]T, error) {
 	rows := make([][]T, dataset.Rows())
 	for i := range rows {
@@ -381,6 +464,7 @@ func toSlice[T any](dataset *hdf5utils.HdfDataset) ([][]T, error) {
 	return rows, nil
 }
 
+// columnMax returns the maximum value in a specified column of a 2D slice
 func columnMax[T RasExtractDataTypes](data [][]T, col int) T {
 	maxVal := data[0][col]
 	for i := range data {
@@ -391,6 +475,7 @@ func columnMax[T RasExtractDataTypes](data [][]T, col int) T {
 	return maxVal
 }
 
+// columnMin returns the minimum value in a specified column of a 2D slice
 func columnMin[T RasExtractDataTypes](data [][]T, col int) T {
 	minVal := data[0][col]
 	for i := range data {

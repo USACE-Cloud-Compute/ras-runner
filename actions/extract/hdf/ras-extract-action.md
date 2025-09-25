@@ -1,6 +1,6 @@
 # RAS-Runner: RAS Extract Action Documentation
 
-This document provides comprehensive documentation for the **RAS Extract Action**, which is designed to extract user-defined datasets from RAS HDF5 files following a successful model run. The extracted data can be written to more accessible formats such as JSON and Console STDOUT. Future support for cloud-native array stores (e.g., TileDB or Zarr) is planned.
+The **RAS Extract Action** is designed to extract user-defined datasets from RAS HDF5 files following a successful HEC-RAS model run. The extracted data can be written to more accessible formats such as JSON and Console STDOUT. Future support for cloud-native array stores (e.g., TileDB or Zarr) is planned.
 
 ## Overview
 

@@ -13,6 +13,10 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+const (
+	reflineAttrName = "refline"
+)
+
 func init() {
 	cc.ActionRegistry.RegisterAction("refline-to-boundary-condition", &ReflineToBc{})
 }
@@ -23,13 +27,10 @@ type ReflineToBc struct {
 }
 
 func (a *ReflineToBc) Run() error {
+
 	//@TODO need string length
 	log.Printf("Updating refline to boundary condition %s\n", a.Action.Description)
-	refline := a.Action.Attributes["refline"].(string)
-	//srcname := a.Action.Attributes["src"].(map[string]any)["name"].(string)
-	//srcdatapath := a.Action.Attributes["src"].(map[string]any)["datapath"].(string)
-	//dest := a.Action.Attributes["dest"].(map[string]any)["name"].(string)
-	//destdatapath := a.Action.Attributes["dest"].(map[string]any)["datapath"].(string)
+	refline := a.Action.Attributes.GetStringOrFail(reflineAttrName)
 
 	src, err := a.Action.IOManager.GetInputDataSource("source")
 	if err != nil {
@@ -40,10 +41,12 @@ func (a *ReflineToBc) Run() error {
 	if err != nil {
 		return fmt.Errorf("error getting input store %s: %s", src.StoreName, err)
 	}
+
 	dest, err := a.Action.IOManager.GetOutputDataSource("destination")
 	if err != nil {
 		return fmt.Errorf("error getting input source %s: %s", "source", err)
 	}
+
 	err = MigrateRefLineData(src.Paths["hdf"], srcstore, src.DataPaths["refline"], dest.Paths["hdf"], dest.DataPaths["bcline"], refline)
 	if err != nil {
 		return fmt.Errorf("failed to migrate refline data: %s", err)
@@ -55,12 +58,6 @@ func (a *ReflineToBc) Run() error {
 }
 
 func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, refline string) error {
-	// if srcstore.StoreType == "S3" {
-	// 	profile := srcstore.DsProfile
-	// 	bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
-	// 	template := os.Getenv("HDF_AWS_S3_TEMPLATE")
-	// 	//src = fmt.Sprintf(actions.S3BucketTemplate, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
-	// }
 
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
@@ -121,7 +118,7 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		name := []string{}
 		err := refLineNames.ReadRow(i, &name)
 		if err != nil || len(name) == 0 {
-			return errors.New("Error reading Reference Line Names")
+			return errors.New("error reading reference line Names")
 		}
 
 		if refline == name[0] {
@@ -129,11 +126,14 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		}
 	}
 	if refLineColumnIndex < 0 {
-		return errors.New(fmt.Sprintf("Invalid Reference Line: %s\n", refline))
+		return fmt.Errorf("invalid reference line: %s", refline)
 	}
 
 	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
 	_, err = os.Stat(destpath)
+	if err != nil {
+		return err
+	}
 
 	var destfile *hdf5.File
 

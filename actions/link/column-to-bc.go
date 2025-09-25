@@ -1,7 +1,6 @@
 package actions
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -23,18 +22,35 @@ type ColumnToBcAction struct {
 	cc.ActionRunnerBase
 }
 
+const (
+	colindexField = "column_index"
+	nameField     = "name"
+	dataPathField = "datapath"
+)
+
 func (a *ColumnToBcAction) Run() error {
 	log.Printf("Updating boundary condition %s\n", a.Action.Description)
-	column_index := a.Action.Attributes["column-index"].(string)
+	column_index := a.Action.Attributes.GetStringOrFail(colindexField)
 	readcol, err := strconv.Atoi(column_index)
 	if err != nil {
-		log.Fatalf("Invalid column index: %s\n", column_index)
+		return fmt.Errorf("invalid column index: %s", column_index)
 	}
 
-	srcname := a.Action.Attributes["src"].(map[string]any)["name"].(string)
-	srcdatapath := a.Action.Attributes["src"].(map[string]any)["datapath"].(string)
-	dest := a.Action.Attributes["dest"].(map[string]any)["name"].(string)
-	destdatapath := a.Action.Attributes["dest"].(map[string]any)["datapath"].(string)
+	srcconfig, err := a.Action.Attributes.GetMap("src")
+	if err != nil {
+		return fmt.Errorf("missing src attribute data")
+	}
+
+	destconfig, err := a.Action.Attributes.GetMap("dest")
+	if err != nil {
+		return fmt.Errorf("missing dest attribute data")
+	}
+
+	//this type assertion is ugly but since we are stopping on error, a panic is ok
+	srcname := srcconfig[nameField].(string)
+	srcdatapath := srcconfig[dataPathField].(string)
+	destname := destconfig[nameField].(string)
+	destdatapath := destconfig[dataPathField].(string)
 
 	src, err := a.PluginManager.GetInputDataSource(srcname)
 	if err != nil {
@@ -46,7 +62,7 @@ func (a *ColumnToBcAction) Run() error {
 		return fmt.Errorf("error getting input store %s: %s", src.StoreName, err)
 	}
 
-	err = MigrateColumnData(src.Paths["0"], srcstore, srcdatapath, dest, destdatapath, readcol)
+	err = MigrateColumnData(src.Paths["0"], srcstore, srcdatapath, destname, destdatapath, readcol)
 	if err != nil {
 		return fmt.Errorf("unable to migrate column data: %s", err)
 	}
@@ -70,6 +86,9 @@ func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, 
 
 	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
 	_, err = os.Stat(destpath)
+	if err != nil {
+		return err
+	}
 
 	var destfile *hdf5.File
 
@@ -188,5 +207,5 @@ func getRowVal2(srcVals *hdf5utils.HdfDataset, srcTimes *hdf5utils.HdfDataset, t
 			return srcdata[readcol-1], nil
 		}
 	}
-	return 0, errors.New(fmt.Sprintf("Unable to find corresponding input source record for time %f", timeval))
+	return 0, fmt.Errorf("unable to find corresponding input source record for time %f", timeval)
 }
