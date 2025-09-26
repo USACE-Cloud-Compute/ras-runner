@@ -14,35 +14,33 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
-// Action Attributes Documentation
+// Action: column-to-boundary-condition
 //
-// The "column-to-boundary-condition" writes columnar data in hdf5 RAS output files
-// to boundary conditions in hdf5 RAS input files
-// the action requires the following attributes:
+// Description:
+//   The "column-to-boundary-condition" action reads columnar data from HDF5 RAS output files
+//   and writes it to boundary condition datasets in HDF5 RAS input files.
 //
-// 1. "column_index" (string)
-//    - Description: The column index of data to extract from source file
-//    - Example: "3"
-//    - Required: Yes
+// Attributes:
+//   1. "column_index" (string)
+//      - Description: The column index of data to extract from source file (1-based indexing)
+//      - Example: "3"
+//      - Required: Yes
 //
-// 2. "src" (map)
-//    - Description: Source configuration parameters
-//    - Required: Yes
-//    - Fields:
-//      * "name" (string): Name of the input data source
-//      * "datapath" (string): Path to the dataset within the source file
+//   2. "src" (map)
+//      - Description: Source configuration parameters
+//      - Required: Yes
+//      - Fields:
+//        * "name" (string): Name of the input data source
+//        * "datapath" (string): Path to the dataset within the source file
 //
-// 3. "dest" (map)
-//    - Description: Destination configuration parameters
-//    - Required: Yes
-//    - Fields:
-//      * "name" (string): Name of the output data source
-//      * "datapath" (string): Path to the dataset within the destination file
+//   3. "dest" (map)
+//      - Description: Destination configuration parameters
+//      - Required: Yes
+//      - Fields:
+//        * "name" (string): Name of the output data source
+//        * "datapath" (string): Path to the dataset within the destination file
 //
-// the action requires a store for the input and output
-//
-//
-// Example Action Configuration:
+// Example Configuration:
 // {
 //   "action": "column-to-boundary-condition",
 //   "attributes": {
@@ -57,6 +55,26 @@ import (
 //     }
 //   }
 // }
+//
+// Functionality:
+//   - Validates column index and configuration parameters
+//   - Opens source HDF5 file and retrieves specified dataset
+//   - Opens destination HDF5 file and prepares target dataset
+//   - Reads time-series data from source file
+//   - Matches timestamps between source and destination datasets
+//   - Extracts specified column data from source for each time step
+//   - Writes updated boundary condition data to destination
+//
+// Data Format Requirements:
+//   Source Dataset Structure: 2D hdf5 dataset
+//   Destination Dataset Structure: 2D array with time as first column and boundary condition values as second column
+//
+// Supported Store Types:
+//   S3 stores only (other store types will be added in future releases)
+//
+// Error Handling:
+//   Returns descriptive error messages for invalid parameters, file access errors,
+//   data read/write failures, and timestamp matching failures
 
 func init() {
 	cc.ActionRegistry.RegisterAction("column-to-boundary-condition", &ColumnToBcAction{})
@@ -72,6 +90,7 @@ const (
 	dataPathField = "datapath"
 )
 
+// Run executes the column-to-boundary-condition action
 func (a *ColumnToBcAction) Run() error {
 	log.Printf("Updating boundary condition %s\n", a.Action.Description)
 	column_index := a.Action.Attributes.GetStringOrFail(colindexField)
@@ -116,6 +135,14 @@ func (a *ColumnToBcAction) Run() error {
 	return nil
 }
 
+// MigrateColumnData transfers columnar data from source to destination HDF5 files
+// Parameters:
+//   - src: Source file path
+//   - srcstore: Data store for the source file
+//   - src_datapath: Path to dataset within source file
+//   - dest: Destination file name
+//   - dest_datapath: Path to dataset within destination file
+//   - readcol: Column index to read from source (1-based)
 func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, readcol int) error {
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
@@ -223,6 +250,16 @@ func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, 
 	return nil
 }
 
+// getRowVal2 retrieves a value from source data at the specified time
+// Parameters:
+//   - srcVals: Source values dataset
+//   - srcTimes: Source times dataset
+//   - timeval: Target time value to match
+//   - readcol: Column index to read (1-based)
+//
+// Returns:
+//   - float32: Value from source data at matching time, or 0 if not found
+//   - error: Error if any occurred during reading or matching
 func getRowVal2(srcVals *hdf5utils.HdfDataset, srcTimes *hdf5utils.HdfDataset, timeval float32, readcol int) (float32, error) {
 	numcols := srcVals.Dims()[1]
 	//
