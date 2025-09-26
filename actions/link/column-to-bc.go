@@ -14,6 +14,50 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+// Action Attributes Documentation
+//
+// The "column-to-boundary-condition" writes columnar data in hdf5 RAS output files
+// to boundary conditions in hdf5 RAS input files
+// the action requires the following attributes:
+//
+// 1. "column_index" (string)
+//    - Description: The column index of data to extract from source file
+//    - Example: "3"
+//    - Required: Yes
+//
+// 2. "src" (map)
+//    - Description: Source configuration parameters
+//    - Required: Yes
+//    - Fields:
+//      * "name" (string): Name of the input data source
+//      * "datapath" (string): Path to the dataset within the source file
+//
+// 3. "dest" (map)
+//    - Description: Destination configuration parameters
+//    - Required: Yes
+//    - Fields:
+//      * "name" (string): Name of the output data source
+//      * "datapath" (string): Path to the dataset within the destination file
+//
+// the action requires a store for the input and output
+//
+//
+// Example Action Configuration:
+// {
+//   "action": "column-to-boundary-condition",
+//   "attributes": {
+//     "column_index": "3",
+//     "src": {
+//       "name": "source_data",
+//       "datapath": "/results/flow"
+//     },
+//     "dest": {
+//       "name": "boundary_condition",
+//       "datapath": "/boundary/flow"
+//     }
+//   }
+// }
+
 func init() {
 	cc.ActionRegistry.RegisterAction("column-to-boundary-condition", &ColumnToBcAction{})
 }
