@@ -21,11 +21,27 @@ func init() {
 	cc.ActionRegistry.RegisterAction("refline-to-boundary-condition", &ReflineToBc{})
 }
 
-// refline to boundary condition
+// ReflineToBc reads reference line data from HDF5 RAS output files and writes it to boundary condition datasets in HDF5 RAS input files.
+//
+// This action facilitates the transfer of reference line flow data from RAS output results to boundary conditions in RAS input models.
+// Unlike the column-to-boundary-condition action, this action assumes that the time arrays in source and destination datasets are identical
+// and does not perform time matching between datasets.
 type ReflineToBc struct {
 	cc.ActionRunnerBase
 }
 
+// Run executes the refline-to-boundary-condition action.
+//
+// It performs the following steps:
+// 1. Retrieves the reference line name from action attributes
+// 2. Gets source and destination data sources from IOManager
+// 3. Calls MigrateRefLineData to process the data transfer
+// 4. Returns any errors encountered during processing
+//
+// The action requires:
+// - "refline" attribute specifying which reference line to extract
+// - "source" configuration with name and datapath for input data
+// - "destination" configuration with name and datapath for output data
 func (a *ReflineToBc) Run() error {
 
 	//@TODO need string length
@@ -57,6 +73,26 @@ func (a *ReflineToBc) Run() error {
 	return nil
 }
 
+// MigrateRefLineData transfers reference line flow data from source HDF5 file to destination boundary condition dataset.
+//
+// This function performs the core data migration logic:
+// 1. Handles S3 store type by constructing proper AWS S3 URL template
+// 2. Opens source HDF5 file and reads time, flow, and name datasets
+// 3. Locates the specified reference line column index
+// 4. Opens destination HDF5 file
+// 5. Reads existing boundary condition data
+// 6. Combines destination time values with reference line flow data
+// 7. Writes updated boundary condition data back to destination
+//
+// Parameters:
+//   - src: path to source HDF5 file
+//   - srcstore: data store configuration for source
+//   - src_datapath: path to reference line dataset in source file
+//   - dest: path to destination HDF5 file
+//   - dest_datapath: path to boundary condition dataset in destination file
+//   - refline: name of reference line to extract data from
+//
+// Returns error if any step fails during data processing or file operations.
 func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, refline string) error {
 
 	if srcstore.StoreType == "S3" {

@@ -14,47 +14,7 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
-// Action: column-to-boundary-condition
-//
-// Description:
-//   The "column-to-boundary-condition" action reads columnar data from HDF5 RAS output files
-//   and writes it to boundary condition datasets in HDF5 RAS input files.
-//
-// Attributes:
-//   1. "column_index" (string)
-//      - Description: The column index of data to extract from source file (1-based indexing)
-//      - Example: "3"
-//      - Required: Yes
-//
-//   2. "src" (map)
-//      - Description: Source configuration parameters
-//      - Required: Yes
-//      - Fields:
-//        * "name" (string): Name of the input data source
-//        * "datapath" (string): Path to the dataset within the source file
-//
-//   3. "dest" (map)
-//      - Description: Destination configuration parameters
-//      - Required: Yes
-//      - Fields:
-//        * "name" (string): Name of the output data source
-//        * "datapath" (string): Path to the dataset within the destination file
-//
-// Example Configuration:
-// {
-//   "action": "column-to-boundary-condition",
-//   "attributes": {
-//     "column_index": "3",
-//     "src": {
-//       "name": "source_data",
-//       "datapath": "/results/flow"
-//     },
-//     "dest": {
-//       "name": "boundary_condition",
-//       "datapath": "/boundary/flow"
-//     }
-//   }
-// }
+// ColumnToBc reads column oriented dataset from HDF5 RAS output files and writes it to boundary condition datasets in HDF5 RAS input files.
 //
 // Functionality:
 //   - Validates column index and configuration parameters
