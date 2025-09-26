@@ -13,6 +13,21 @@ The RAS Extract Action supports three primary extraction methods:
 Each method allows users to define how data should be extracted, processed, and outputted based on their specific needs.
 
 ---
+## Globally Required Attributes
+These parameters are required for all extraction actions and can be included in either payload attributes or action attributes:
+
+```json
+{
+  "modelPrefix": "muncie",
+  "plan": "04"
+}
+```
+| Attribute             | Description |
+|-----------------------|-------------|
+| `modelPrefix`         | The file name of the ras mdoel without any extension information |
+| `plan`                | The plan number as a two digit string (e.g. plan 4 is '04')  |
+
+---
 
 ## 1. Dataset Extraction
 

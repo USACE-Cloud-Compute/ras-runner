@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"path"
 	"reflect"
 	"regexp"
@@ -372,6 +373,9 @@ type AttributeExtractInput struct {
 	WriterType RasExtractWriterType
 	// WriteBlockName is the name used for identifying the block in output
 	WriteBlockName string
+
+	AttributeFailureConditionField string
+	AttributeFailureConditionValue any
 }
 
 // AttributeExtract extracts attributes from an HDF5 file based on the provided input configuration
@@ -400,16 +404,16 @@ func AttributeExtract(input AttributeExtractInput, filepath string) error {
 // Attributes extracts attributes from a specified path in the HDF5 file
 func (rer *RasExtractor[T]) Attributes(input AttributeExtractInput) (map[string]any, error) {
 	vals := make(map[string]any)
-	root, err := rer.f.OpenGroup(input.AttributePath)
+	group, err := rer.f.OpenGroup(input.AttributePath)
 	if err != nil {
 		return nil, err
 	}
-	defer root.Close()
+	defer group.Close()
 
 	for _, v := range input.AttributeNames {
 		err := func() error {
-			if root.AttributeExists(v) {
-				attr, err := root.OpenAttribute(v)
+			if group.AttributeExists(v) {
+				attr, err := group.OpenAttribute(v)
 				if err != nil {
 					return err
 				}
@@ -427,6 +431,12 @@ func (rer *RasExtractor[T]) Attributes(input AttributeExtractInput) (map[string]
 				} else {
 					vals[v] = val.Elem().Interface() //get the value from the pointer
 				}
+
+				//perform fail on check here
+				if input.AttributeFailureConditionField == v && areEqual(input.AttributeFailureConditionValue, val) {
+					log.Printf("failure check triggered: %s was %v\n", "myfield", val)
+					os.Exit(1) //exit with error condition
+				}
 			}
 			return nil
 		}()
@@ -440,6 +450,28 @@ func (rer *RasExtractor[T]) Attributes(input AttributeExtractInput) (map[string]
 // =============================================================================
 // Utility functions
 // =============================================================================
+
+func areEqual(a, b any) bool {
+	// Handle nil cases
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+
+	// Get reflect.Value of both values
+	va := reflect.ValueOf(a)
+	vb := reflect.ValueOf(b)
+
+	// If types are different, they can't be equal
+	if va.Type() != vb.Type() {
+		return false
+	}
+
+	// Use reflect.DeepEqual for comparison
+	return reflect.DeepEqual(a, b)
+}
 
 // isValueNaN checks if a reflect.Value represents NaN (for floating point types)
 func isValueNaN(value reflect.Value) bool {

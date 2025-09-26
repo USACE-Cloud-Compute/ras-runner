@@ -14,23 +14,47 @@ import (
 )
 
 const (
+	// timeStepInDaysPath is the HDF5 path to the time step data.
 	timeStepInDaysPath string = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Time"
+
+	// breachPathTemplate is the template for constructing 2D Hyd Conn dataset paths.
 	breachPathTemplate string = "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/%s/2D Hyd Conn"
-	breachDataPath     string = "/%s/Breaching Variables"
-	//breachFlowDataPath          string  = "/%s/HW TW Segments/Flow"
-	BreachFlowColumn            int     = 6
-	BreachVelocityFpsColumn     int     = 7
-	BottomWidthColumn           int     = 2
-	HwColumn                    int     = 0
-	TwColumn                    int     = 1
+
+	// breachDataPath is the path suffix for breaching variables data.
+	breachDataPath string = "/%s/Breaching Variables"
+
+	// BreachFlowColumn is the column index for flow data in breaching variables.
+	BreachFlowColumn int = 6
+
+	// BreachVelocityFpsColumn is the column index for velocity data in breaching variables.
+	BreachVelocityFpsColumn int = 7
+
+	// BottomWidthColumn is the column index for bottom width data in breaching variables.
+	BottomWidthColumn int = 2
+
+	// HwColumn is the column index for HW (Stage) data in breaching variables.
+	HwColumn int = 0
+
+	// TwColumn is the column index for TW (Stage) data in breaching variables.
+	TwColumn int = 1
+
+	// BreachFlowVelocityThreshold is the velocity threshold to determine breach progression duration.
 	BreachFlowVelocityThreshold float32 = 1.5
 )
 
+// BreachData represents the breach data extracted from an HDF5 file.
 type BreachData struct {
-	BreachAt               string
-	BreachAtTime           float32
+	// BreachAt is the RAS attr location where the breach occurred.
+	BreachAt string
+
+	// BreachAtTime is the RAS attr time (in days) when the breach occurred.
+	BreachAtTime float32
+
+	// BreachingVariablesData contains the breaching variables data.
 	BreachingVariablesData [][]float32
-	TimeInDays             []float64
+
+	// TimeInDays contains the time steps in days.
+	TimeInDays []float64
 }
 
 type RasBreach struct {
@@ -38,6 +62,10 @@ type RasBreach struct {
 	//rasversion string
 }
 
+// NewRasBreachData creates a new RasBreach instance from an HDF5 file.
+//
+// It opens the specified HDF5 file and returns a pointer to RasBreach.
+// Returns an error if the file cannot be opened or read.
 func NewRasBreachData(filepath string) (*RasBreach, error) {
 	f, err := hdf5utils.OpenFile(filepath)
 	if err != nil {
@@ -48,10 +76,16 @@ func NewRasBreachData(filepath string) (*RasBreach, error) {
 	return &rbd, nil
 }
 
+// Close closes the underlying HDF5 file.
 func (rb *RasBreach) Close() {
 	rb.f.Close()
 }
 
+// FlowAreas2D returns a list of 2D flow area names from the HDF5 file.
+//
+// It reads the 2D Flow Areas group and returns a slice of strings representing
+// each flow area name.
+// Returns an error if the group cannot be accessed or read.
 func (rb *RasBreach) FlowAreas2D() ([]string, error) {
 	groupPath := "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas"
 	group, err := hdf5utils.NewHdfGroup(rb.f, groupPath)
@@ -62,6 +96,11 @@ func (rb *RasBreach) FlowAreas2D() ([]string, error) {
 	return group.ObjectNames()
 }
 
+// ConnectionNames returns a list of connection names for a given 2D flow area.
+//
+// It reads the specified flow area's 2D Hyd Conn group and returns a slice of
+// strings representing each connection name.
+// Returns an error if the group cannot be accessed or read.
 func (rb *RasBreach) ConnectionNames(name string) ([]string, error) {
 	path := fmt.Sprintf(breachPathTemplate, name)
 
@@ -92,6 +131,11 @@ func (rb *RasBreach) ConnectionNames(name string) ([]string, error) {
 	return connNames, err
 }
 
+// BreachData returns the breach data for a given flow area and connection.
+//
+// It reads the breaching variables data for the specified connection within
+// the flow area and returns a BreachData struct containing all relevant information.
+// Returns an error if the data cannot be read or is missing.
 func (rb *RasBreach) BreachData(name string, connName string) (BreachData, error) {
 	bd := BreachData{}
 	datapath := fmt.Sprintf(breachPathTemplate, name) + fmt.Sprintf(breachDataPath, connName)
@@ -115,6 +159,10 @@ func (rb *RasBreach) BreachData(name string, connName string) (BreachData, error
 	return bd, nil
 }
 
+// readBreachAttributes reads the attributes of a breach dataset.
+//
+// It populates the BreachData struct with the "Breach at" and "Breach at Time (Days)" attributes.
+// Returns an error if the attributes cannot be read.
 func (rb *RasBreach) readBreachAttributes(bd *BreachData, datapath string) error {
 	ds, err := rb.f.OpenDataset(datapath)
 	if err != nil {
@@ -131,6 +179,10 @@ func (rb *RasBreach) readBreachAttributes(bd *BreachData, datapath string) error
 	return nil
 }
 
+// readTimeSteps reads the time step data from the HDF5 file.
+//
+// It returns a slice of float64 values representing the time steps in days.
+// Returns an error if the time step data cannot be read.
 func (rb *RasBreach) readTimeSteps() ([]float64, error) {
 	options := hdf5utils.HdfReadOptions{
 		Dtype:        reflect.Float64,
@@ -148,6 +200,10 @@ func (rb *RasBreach) readTimeSteps() ([]float64, error) {
 	return *(data.Data.Buffer.(*[]float64)), err
 }
 
+// readBreachData reads the breaching variables data from the HDF5 file.
+//
+// It returns a 2D slice of float32 values representing the breaching variables data.
+// Returns an error if the data cannot be read.
 func (rb *RasBreach) readBreachData(datapath string) ([][]float32, error) {
 	options := hdf5utils.HdfReadOptions{
 		Dtype:        reflect.Float32,
@@ -170,6 +226,10 @@ func (rb *RasBreach) readBreachData(datapath string) ([][]float32, error) {
 	return breachingVarsData, err
 }
 
+// getattr reads an attribute from an HDF5 dataset.
+//
+// It handles both string and numeric attributes by detecting the type of the destination
+// and reading the appropriate data format.
 func getattr(ds *hdf5.Dataset, attrname string, dest any) error {
 	attr, err := ds.OpenAttribute(attrname)
 	if err != nil {
@@ -223,6 +283,10 @@ var recordHeaders []string = []string{
 	"BreachProgressionDuration",
 }
 
+// GetBreachRecord creates a BreachRecord from the extracted breach data.
+//
+// It takes event identifier, flow area name, connection name, and breach data
+// to construct a complete BreachRecord with all relevant fields populated.
 func GetBreachRecord(event string, flowarea2d string, connectionname string, bd *BreachData) BreachRecord {
 	br := BreachRecord{}
 	br.FlowArea2D = flowarea2d
@@ -249,6 +313,9 @@ func GetBreachRecord(event string, flowarea2d string, connectionname string, bd 
 	return br
 }
 
+// breachAtTimeIndex finds the index of the breach time in the time step data.
+//
+// It returns -1 if no breach occurred or if the breach time is not found in the time steps.
 func breachAtTimeIndex(bd *BreachData) int {
 	if math.IsNaN(float64(bd.BreachAtTime)) {
 		return -1
@@ -261,6 +328,10 @@ func breachAtTimeIndex(bd *BreachData) int {
 	return -1
 }
 
+// getThresholdDuration calculates the duration for which the velocity exceeds a threshold.
+//
+// It takes the velocity data, time steps, and threshold value to compute how long
+// the velocity remained above the threshold.
 func getThresholdDuration(data []float32, time []float64, threshold float32) float64 {
 	startIndex := 0
 	endIndex := 0
@@ -276,10 +347,14 @@ func getThresholdDuration(data []float32, time []float64, threshold float32) flo
 	return time[endIndex] - time[startIndex]
 }
 
+// Number is a type constraint for numeric types.
 type Number interface {
 	float64 | float32 | int | int8 | int16 | int32 | int64
 }
 
+// Max returns the maximum value in a slice of numbers.
+//
+// It handles NaN values properly and returns the first non-NaN value if all are NaN.
 func Max[T Number](t []T) T {
 	max := t[0]
 	for _, v := range t {
@@ -291,15 +366,22 @@ func Max[T Number](t []T) T {
 	return max
 }
 
+// BreachRecordWriter defines the interface for writing breach records.
 type BreachRecordWriter interface {
 	Write(record BreachRecord) error
 	Close()
 }
 
+// NewCsvBreachRecordWriter creates a new CSV breach record writer.
+//
+// It opens or creates the specified file path for writing CSV data.
 type CsvBreachRecordWriter struct {
 	writer io.WriteCloser
 }
 
+// Write writes a breach record to the CSV file.
+//
+// It formats the record data as a CSV row and writes it to the underlying writer.
 func NewCsvBreachRecordWriter(csvPath string) (*CsvBreachRecordWriter, error) {
 	writer, err := os.Create(csvPath)
 	if err != nil {
@@ -310,6 +392,7 @@ func NewCsvBreachRecordWriter(csvPath string) (*CsvBreachRecordWriter, error) {
 	return &bw, err
 }
 
+// writeHeaders writes the CSV column headers to the output file.
 func (cbw *CsvBreachRecordWriter) Write(r BreachRecord) error {
 	row := fmt.Sprintf("%s,%s,%s,%v,%f,%d,%f,%f,%f,%f,%f,%f,%f\n",
 		r.Event,
@@ -341,6 +424,7 @@ func (cbw *CsvBreachRecordWriter) writeHeaders() {
 
 }
 
+// Close closes the underlying CSV writer.
 func (cbw *CsvBreachRecordWriter) Close() {
 	cbw.writer.Close()
 }

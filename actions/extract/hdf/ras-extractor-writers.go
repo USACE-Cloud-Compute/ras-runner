@@ -86,12 +86,6 @@ func (rw *JsonRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
 // JSON attribute writer
 // =============================================================================
 
-// type JsonAttrOutputBlock struct {
-// 	Dataset string   `json:"dataset"`
-// 	Columns []string `json:"columns"`
-// 	Data    [][]any  `json:"data"`
-// }
-
 func NewJsonAttributeExtractor(blockname string, dataset string) (*JsonAttributeExtractWriter, error) {
 	writer := JsonAttributeExtractWriter{blockname: blockname, dataset: dataset}
 	return &writer, nil
@@ -103,17 +97,6 @@ type JsonAttributeExtractWriter struct {
 }
 
 func (jw *JsonAttributeExtractWriter) Write(vals map[string]any) error {
-	// cols := make([]string, len(vals))
-	// databox := make([][]any, 1)
-	// data := make([]any, len(vals))
-	// count := 0
-	// for k, v := range vals {
-	// 	cols[count] = k
-	// 	data[count] = v
-	// 	count++
-	// }
-	// databox[0] = data
-	//writerAccumulator[jw.blockname] = []map[string]any{{"attributes": JsonAttrOutputBlock{Columns: cols, Data: databox, Dataset: jw.dataset}}}
 	writerAccumulator[jw.blockname] = []map[string]any{{"attributes": RasExtractorOutputBlock[float32]{Dataset: jw.dataset, Record: vals}}}
 	return nil
 }

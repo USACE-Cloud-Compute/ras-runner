@@ -21,10 +21,28 @@ func init() {
 	cc.ActionRegistry.RegisterAction("ras-breach-extract", &RasBreachExtractAction{})
 }
 
+// RasBreachExtractAction extracts breach data from RAS HDF5 files.
+// It inspects 2D Hyd Conn datasets for breaching conditions and writes
+// the results to ouput formats for further processing or output.
+//
+// The action reads breach data from the specified model results path,
+// processes each flow area and connection, and accumulates breach records
+// that are then written to the configured output data source.
 type RasBreachExtractAction struct {
 	cc.ActionRunnerBase
 }
 
+// Run executes the breach extraction action.
+//
+// It:
+// 1. Determines model prefix and plan from action attributes or plugin manager
+// 2. Constructs the model results path
+// 3. Initializes breach data reader
+// 4. Processes flow areas and connections to extract breach records
+// 5. Writes extracted records to the output format
+// 6. Sends output to the data to the configured output data source
+//
+// Returns error if any step fails during execution.
 func (a *RasBreachExtractAction) Run() error {
 	var modelPrefix string
 	var plan string
@@ -90,14 +108,27 @@ func (a *RasBreachExtractAction) Run() error {
 	return err
 }
 
+// BreachDataExtractWriter defines the interface for writing breach data records.
 type BreachDataExtractWriter interface {
 	Write(recs []BreachRecord) error
 }
 
+// JsonBreachDataExtractWriter implements the BreachDataExtractWriter interface
+// for writing breach records in JSON format to an accumulator structure.
 type JsonBreachDataExtractWriter struct {
 	blockname string
 }
 
+// Write processes breach records and accumulates them in a structured format.
+//
+// For each record, it:
+// 1. Converts the record to a map representation
+// 2. Extracts the location field (SaConn) as dataset name
+// 3. Formats the dataset path using the breachPathTemplate
+// 4. Creates an output block with the dataset and record data
+// 5. Appends the block to the writer accumulator under the blockname key
+//
+// This method populates the global writerAccumulator map for later JSON marshaling.
 func (writer JsonBreachDataExtractWriter) Write(recs []BreachRecord) error {
 	jsonRecs := breachRecordsToJsonAccumulatorMap(recs)
 	for _, br := range jsonRecs {
@@ -106,15 +137,18 @@ func (writer JsonBreachDataExtractWriter) Write(recs []BreachRecord) error {
 		outputBlock := RasExtractorOutputBlock[float32]{Dataset: dataset, Record: br}
 		writerAccumulator[writer.blockname] = append(writerAccumulator[writer.blockname], map[string]any{datasetName.(string): outputBlock})
 	}
-	//outputblock:=RasExtractorOutputBlock[float32]{Dataset: }
-	//writerAccumulator[writer.blockname] = append(writerAccumulator["breach-records"], jsonRecs...)
 	return nil
 }
 
-// func (bew *JsonBreachDataExtractWriter) Write(recs []BreachRecord) error {
-// 	for
-// }
-
+// breachRecordsToJsonAccumulatorMap converts a slice of BreachRecord structs
+// into a slice of maps suitable for JSON marshaling.
+//
+// For each record:
+// 1. Creates a new map for the record data
+// 2. Uses reflection to iterate through struct fields
+// 3. Handles float values specially to convert NaN to nil
+// 4. Preserves all other field values as-is
+// 5. Returns the slice of maps representing all records
 func breachRecordsToJsonAccumulatorMap(recs []BreachRecord) []map[string]any {
 	accumMaps := []map[string]any{}
 	for _, r := range recs {
