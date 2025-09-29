@@ -37,14 +37,13 @@ func (a UnsteadySimulationAction) Run() error {
 		scriptPath = actions.MODEL_SCRIPT_PATH
 	}
 
-	modelPrefix := a.PluginManager.Payload.Attributes["modelPrefix"].(string)
-
-	plan := a.PluginManager.Payload.Attributes["plan"].(string) //cfile
-	geom := a.PluginManager.Payload.Attributes["geom"].(string) //bfile
+	modelPrefix := a.PluginManager.Attributes.GetStringOrFail("modelPrefix")
+	plan := a.PluginManager.Attributes.GetStringOrFail("plan") //cfile
+	geom := a.PluginManager.Attributes.GetStringOrFail("geom") //bfile
 
 	out := strings.Builder{}
 
-	if gproc, ok := a.PluginManager.Payload.Attributes["geom_preproc"]; ok {
+	if gproc, ok := a.PluginManager.Attributes["geom_preproc"]; ok {
 		runGeomPreproc := gproc.(string)
 		if strings.ToLower(runGeomPreproc) == "true" {
 			gppcmd := fmt.Sprintf("%s/%s", scriptPath, actions.GEOM_PREPROC)
@@ -55,6 +54,9 @@ func (a UnsteadySimulationAction) Run() error {
 			}
 			out.Write([]byte("---------- GEOMETRY PREPROCESSOR --------------"))
 			_, err = out.Write(cmdout)
+			if err != nil {
+				return err
+			}
 			out.Write([]byte("---------- END GEOMETRY PREPROCESSOR ----------"))
 		}
 	}
@@ -117,13 +119,15 @@ func saveResults(pm *cc.PluginManager, modelPrefix string, rasplan string, raslo
 	//write plan results
 	file := fmt.Sprintf("%s.p%s.tmp.hdf", modelPrefix, rasplan)
 	ds, err := pm.GetOutputDataSource(file)
+	if err != nil {
+		return err
+	}
 	filepath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, file)
 	reader, err := os.Open(filepath)
 	if err != nil {
 		raslog.WriteString(fmt.Sprintf("Unable to open %s for copying: %s\n", file, err))
 	} else {
 		defer reader.Close()
-		//err = pm.FileWriter(reader, ds, 0)
 		_, err = pm.Put(cc.PutOpInput{
 			SrcReader: reader,
 			DataSourceOpInput: cc.DataSourceOpInput{
@@ -142,7 +146,6 @@ func saveResults(pm *cc.PluginManager, modelPrefix string, rasplan string, raslo
 	}
 	logReader := strings.NewReader(raslog.String())
 	log.Printf("Output log:%s", ds.Paths["0"])
-	//err = pm.FileWriter(logReader, ds, 0)
 	_, err = pm.Put(cc.PutOpInput{
 		SrcReader: logReader,
 		DataSourceOpInput: cc.DataSourceOpInput{
