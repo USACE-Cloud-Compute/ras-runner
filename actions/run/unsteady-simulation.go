@@ -6,10 +6,20 @@ import (
 	"os"
 	"os/exec"
 	"ras-runner/actions"
+	"ras-runner/actions/extract/hdf"
 	"strings"
 
 	"github.com/usace/cc-go-sdk"
 )
+
+const (
+	rasModelSummaryPath string = "/Results/Unsteady/Summary"
+
+	rasModelSummarySolutionAttrName        string = "Solution"
+	rasModelSummarySolutionSuccessCriteria string = "Finished Successfully"
+)
+
+var rasModelSummaryExtractFields []string = []string{"Solution", "Time Stamp Solution Went Unstable"}
 
 func init() {
 	cc.ActionRegistry.RegisterAction("unsteady-simulation", &UnsteadySimulationAction{})
@@ -64,7 +74,43 @@ func (a UnsteadySimulationAction) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to save the results: %s", err)
 	}
+
+	//check for failure condition here
+	if stable, err := isModelStable(modelPrefix, plan); !stable {
+		log.Printf("Model failed: %s\n", err)
+		os.Exit(1) //hard exit with non-zero error condition.  Informs batch the compute filed
+	}
+
 	return nil
+}
+
+func isModelStable(modelPrefix string, plan string) (bool, error) {
+	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR, modelPrefix, plan)
+
+	extractor, err := hdf.NewRasExtractor[int](modelResultsPath)
+	if err != nil {
+		return false, err
+	}
+
+	summaryVals, err := extractor.Attributes(hdf.AttributeExtractInput{
+		AttributePath:  rasModelSummaryPath,
+		AttributeNames: rasModelSummaryExtractFields,
+	})
+	if err != nil {
+		log.Printf("unable to read summary attributes: %s\n", err)
+		return false, err
+	}
+
+	if solutionVal, ok := summaryVals[rasModelSummarySolutionAttrName]; ok {
+		if solutionString, ok := solutionVal.(string); ok {
+			log.Printf("ras solution value: %s\n", solutionString)
+			if strings.Contains(solutionString, rasModelSummarySolutionSuccessCriteria) {
+				return true, nil //model results are valid
+			}
+		}
+	}
+
+	return false, nil //no error but model results are not valid
 }
 
 func saveResults(pm *cc.PluginManager, modelPrefix string, rasplan string, raslog *strings.Builder) error {
