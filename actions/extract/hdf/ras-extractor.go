@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"os"
 	"path"
 	"reflect"
 	"regexp"
@@ -374,8 +373,8 @@ type AttributeExtractInput struct {
 	// WriteBlockName is the name used for identifying the block in output
 	WriteBlockName string
 
-	AttributeFailureConditionField string
-	AttributeFailureConditionValue any
+	// AttributeFailureConditionField string
+	// AttributeFailureConditionValue any
 }
 
 // AttributeExtract extracts attributes from an HDF5 file based on the provided input configuration
@@ -433,10 +432,10 @@ func (rer *RasExtractor[T]) Attributes(input AttributeExtractInput) (map[string]
 				}
 
 				//perform fail on check here
-				if input.AttributeFailureConditionField == v && areEqual(input.AttributeFailureConditionValue, val) {
-					log.Printf("failure check triggered: %s was %v\n", "myfield", val)
-					os.Exit(1) //exit with error condition
-				}
+				// if input.AttributeFailureConditionField == v && areEqual(input.AttributeFailureConditionValue, val) {
+				// 	log.Printf("failure check triggered: %s was %v\n", "myfield", val)
+				// 	os.Exit(1) //exit with error condition
+				// }
 			}
 			return nil
 		}()

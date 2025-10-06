@@ -23,17 +23,17 @@ This action facilitates the transfer of flow or other hydrological data from RAS
      * `datapath` (string): Path to the dataset within the source file
    - Notes: 
      - Only S3 stores are currently supported and they must include a "root" parameter
-     - The source dataset path is accessed via the "0" key in the Paths map
+     - The source dataset path is accessed via the "hdf" key in the Paths map
 
 3. **`dest`** (map)
-   - Description: Destination configuration parameters
+   - Description: Destination configuration parameters for the local destination hdf5
    - Required: Yes
    - Fields:
      * `name` (string): Name of the output data source
      * `datapath` (string): Path to the dataset within the destination file
    - Notes: 
      - Only S3 stores are currently supported and they must include a "root" parameter
-     - The dest dataset path is accessed via the "0" key in the Paths map
+     - The dest dataset path is accessed locally
 
 ## Action Configuration Example
 

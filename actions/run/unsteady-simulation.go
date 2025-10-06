@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	rasModelSummaryPath string = "/Results/Unsteady/Summary"
-
+	rasModelSummaryPath                    string = "/Results/Unsteady/Summary"
 	rasModelSummarySolutionAttrName        string = "Solution"
 	rasModelSummarySolutionSuccessCriteria string = "Finished Successfully"
+	outputDataSourcePathKey                string = "hdf"
+	outputLogDataSourcePathKey             string = "log"
 )
 
 var rasModelSummaryExtractFields []string = []string{"Solution", "Time Stamp Solution Went Unstable"}
@@ -87,7 +88,7 @@ func (a UnsteadySimulationAction) Run() error {
 }
 
 func isModelStable(modelPrefix string, plan string) (bool, error) {
-	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR, modelPrefix, plan)
+	modelResultsPath := fmt.Sprintf("%s/%s.p%s.tmp.hdf", actions.MODEL_DIR, modelPrefix, plan)
 
 	extractor, err := hdf.NewRasExtractor[int](modelResultsPath)
 	if err != nil {
@@ -132,7 +133,7 @@ func saveResults(pm *cc.PluginManager, modelPrefix string, rasplan string, raslo
 			SrcReader: reader,
 			DataSourceOpInput: cc.DataSourceOpInput{
 				DataSourceName: ds.Name,
-				PathKey:        "0",
+				PathKey:        outputDataSourcePathKey,
 			},
 		})
 		if err != nil {
@@ -145,12 +146,12 @@ func saveResults(pm *cc.PluginManager, modelPrefix string, rasplan string, raslo
 		return err
 	}
 	logReader := strings.NewReader(raslog.String())
-	log.Printf("Output log:%s", ds.Paths["0"])
+	log.Printf("Output log:%s", ds.Paths[outputLogDataSourcePathKey])
 	_, err = pm.Put(cc.PutOpInput{
 		SrcReader: logReader,
 		DataSourceOpInput: cc.DataSourceOpInput{
 			DataSourceName: ds.Name,
-			PathKey:        "0",
+			PathKey:        outputLogDataSourcePathKey,
 		},
 	})
 	return err

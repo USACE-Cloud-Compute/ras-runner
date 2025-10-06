@@ -48,6 +48,7 @@ const (
 	colindexField = "column_index"
 	nameField     = "name"
 	dataPathField = "datapath"
+	srcPathField  = "hdf"
 )
 
 // Run executes the column-to-boundary-condition action
@@ -85,7 +86,7 @@ func (a *ColumnToBcAction) Run() error {
 		return fmt.Errorf("error getting input store %s: %s", src.StoreName, err)
 	}
 
-	err = MigrateColumnData(src.Paths["0"], srcstore, srcdatapath, destname, destdatapath, readcol)
+	err = MigrateColumnData(src.Paths[srcPathField], srcstore, srcdatapath, destname, destdatapath, readcol)
 	if err != nil {
 		return fmt.Errorf("unable to migrate column data: %s", err)
 	}
