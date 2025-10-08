@@ -1,4 +1,4 @@
-# RAS-Runner: RAS Breach Action
+# RAS Breach Action
 
 ## Description
 The RAS breach action generates a report that inspects 2D Hyd Conn datasets for breaching conditions. It extracts data locally from hdf5 and writes it to more accessible formats such as JSON.

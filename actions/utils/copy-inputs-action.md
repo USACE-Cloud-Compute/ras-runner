@@ -6,9 +6,23 @@ The **copy-inputs-action** action copies all data source inputs and their respec
 
 This action facilitates the transfer of files from a remote store to the local directory being used for model processing.  Most commonly it is used to transfer the RAS Model files for local execution.
 
-## Action Attributes
+## Implementation Details
 
-### Required Attributes
+The action performs the following steps:
+
+1. **Input Validation**: Validates the inputs configuration and required attributes
+2. **Source Data Access**: Opens the source data files and retrieves the specified datasets
+3. **Destination Data Access**: Creates destination files in the local model directory
+4. **Data Processing**:
+   - Reads data from source files
+   - Writes data to destination files in the model directory
+   - Maintains original filenames during copying
+
+## Configuration
+
+### Attributes
+
+#### Action Attributes
 
 1. **`inputs`** (array)
    - Description: List of input data source configurations
@@ -20,7 +34,9 @@ This action facilitates the transfer of files from a remote store to the local d
      - Each input source can specify multiple file paths to copy
      - Source paths are accessed via the "hdf" key in the Paths map
 
-## Action Configuration Example
+
+
+## Configuration Example
 
 ```json
 {
@@ -38,30 +54,6 @@ This action facilitates the transfer of files from a remote store to the local d
 }
 ```
 
-## Implementation Details
-
-The action performs the following steps:
-
-1. **Input Validation**: Validates the inputs configuration and required attributes
-2. **Source Data Access**: Opens the source data files and retrieves the specified datasets
-3. **Destination Data Access**: Creates destination files in the local model directory
-4. **Data Processing**:
-   - Reads data from source files
-   - Writes data to destination files in the model directory
-   - Maintains original filenames during copying
-
-## Data Format Requirements
-
-### Source Dataset Structure
-- Expected format: Any file type supported by the data source
-
-### Destination Dataset Structure
-- Expected format: Local file system directory (actions.MODEL_DIR)
-
-## Supported Store Types
-
-This action supports all store types that are configured in the plugin manager.
-
 ## Error Handling
 
 The action returns descriptive error messages for:
@@ -70,3 +62,8 @@ The action returns descriptive error messages for:
 - File access errors (source/destination)
 - Data read/write failures
 - Path resolution errors
+
+## Usage Notes
+- Remote files are copied to the local file system directory (actions.MODEL_DIR: `/sim/model`)
+
+

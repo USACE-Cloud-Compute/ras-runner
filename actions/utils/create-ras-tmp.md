@@ -1,14 +1,33 @@
-# Create RAS TMP Action Documentation
+# Create RAS TMP Action
 
-This action creates a temporary HEC RAS input file for running RAS models with the Linux runner. It copies essential datasets from a source RAS file to a new temporary file.
-
-## Overview
-
+## Description
 The `create-ras-tmp` action is designed to prepare a plan RAS model input file for execution by copying the necessary structure and data from an existing RAS hdf file.
+
+## Process Flow
+
+1. **Input Validation**: 
+   - Verifies that both `src` and `local_dest` attributes are provided
+   - Parses `save_to_remote` to boolean value
+   - Checks for remote destination name if remote saving is requested
+
+2. **File Creation**:
+   - Creates a new temporary file at the specified location
+   - Copies core RAS datasets: "Geometry", "Plan Data", "Event Conditions"
+   - Preserves essential file metadata attributes:
+     - File Type
+     - File Version
+     - Projection
+     - Units System
+
+3. **Remote Storage**:
+   - If `save_to_remote` is true, copies the temporary file to the specified remote destination
+
 
 ## Configuration
 
-### Action Attributes
+### Attributes
+
+### Action
 
 | Attribute | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -17,7 +36,7 @@ The `create-ras-tmp` action is designed to prepare a plan RAS model input file f
 | `save_to_remote` | string | No | Whether to save the temporary file to a remote destination (default: "false") |
 | `remote_dest` | string | No | Name of the remote data source if `save_to_remote` is true |
 
-### JSON Configuration Example
+### Configuration Example
 
 ```json
 {
@@ -31,38 +50,6 @@ The `create-ras-tmp` action is designed to prepare a plan RAS model input file f
 }
 ```
 
-## Functionality
-
-### Main Process
-
-1. **Input Validation**: 
-   - Verifies that both `src` and `local_dest` attributes are provided
-   - Parses `save_to_remote` to boolean value
-   - Checks for remote destination name if remote saving is requested
-
-2. **File Creation**:
-   - Creates a new temporary file at the specified location
-   - Copies core RAS datasets: "Geometry", "Plan Data", "Event Conditions"
-   - Preserves essential file metadata attributes
-
-3. **Remote Storage**:
-   - If `save_to_remote` is true, copies the temporary file to the specified remote destination
-
-### Key Datasets Copied
-
-The action copies the following datasets from the source file:
-- Geometry
-- Plan Data
-- Event Conditions
-
-### Metadata Preservation
-
-The action preserves these key file attributes:
-- File Type
-- File Version
-- Projection
-- Units System
-
 ## Error Handling
 
 The action returns descriptive error messages for:
@@ -71,42 +58,9 @@ The action returns descriptive error messages for:
 - Invalid boolean conversion for `save_to_remote`
 - Remote storage failures
 
-## Usage Examples
 
-### Basic Usage
-```json
-{
-  "action": "create-ras-tmp",
-  "attributes": {
-    "src": "model.ras",
-    "local_dest": "temp.ras"
-  }
-}
-```
 
-### With Remote Storage
-```json
-{
-  "action": "create-ras-tmp",
-  "attributes": {
-    "src": "model.ras",
-    "local_dest": "temp.ras",
-    "save_to_remote": "true",
-    "remote_dest": "ras_models"
-  }
-}
-```
+## Usage Notes
 
-## Dependencies
-
-This action requires the following dependencies:
-- `github.com/usace/cc-go-sdk`
-- `github.com/usace/go-hdf5`
-- Standard Go libraries: `fmt`, `log`, `os`, `strconv`, `unsafe`
-
-## Notes
-
-- The temporary file is created in the model directory specified by `actions.MODEL_DIR`
+- The temporary file is created in the model directory specified by `actions.MODEL_DIR` (`/sim/model`)
 - All copied datasets and attributes maintain their original structure and data types
-- The action ensures proper file handle cleanup using defer statements
-- Remote storage functionality requires proper plugin configuration for the `CopyFileToRemote` operation

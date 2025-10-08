@@ -6,9 +6,25 @@ The **column-to-boundary-condition** action reads columnar data from HDF5 RAS ou
 
 This action facilitates the transfer of flow or other hydrological data from RAS output results to boundary conditions in RAS input models. It maps time-series data from a source dataset to corresponding boundary condition entries in a destination dataset based on matching timestamps.
 
-## Action Attributes
+## Implementation Details/Process Flow
 
-### Required Attributes
+The action performs the following steps:
+
+1. **Input Validation**: Validates the column index and configuration parameters
+2. **Source Data Access**: Opens the source HDF5 file and retrieves the specified dataset
+3. **Destination Data Access**: Opens the destination HDF5 file and prepares the target dataset
+4. **Data Processing**:
+   - Reads time-series data from the source file
+   - Matches timestamps between source and destination datasets
+   - Extracts specified column data from source for each time step
+   - Writes updated boundary condition data to destination
+
+5. Time tolerance for matching is defined by the `actions.Tolerance` constant
+6. Column indexing is 0-based (first data column = column 0)
+
+## Configuration
+
+## Action Attributes
 
 1. **`column_index`** (string)
    - Description: The column index of data to extract from the source file (1-based indexing)
@@ -35,7 +51,7 @@ This action facilitates the transfer of flow or other hydrological data from RAS
      - Only S3 stores are currently supported and they must include a "root" parameter
      - The dest dataset path is accessed locally
 
-## Action Configuration Example
+## Configuration Example
 
 ```json
 {
@@ -54,18 +70,7 @@ This action facilitates the transfer of flow or other hydrological data from RAS
 }
 ```
 
-## Implementation Details
 
-The action performs the following steps:
-
-1. **Input Validation**: Validates the column index and configuration parameters
-2. **Source Data Access**: Opens the source HDF5 file and retrieves the specified dataset
-3. **Destination Data Access**: Opens the destination HDF5 file and prepares the target dataset
-4. **Data Processing**:
-   - Reads time-series data from the source file
-   - Matches timestamps between source and destination datasets
-   - Extracts specified column data from source for each time step
-   - Writes updated boundary condition data to destination
 
 ## Data Format Requirements
 
@@ -98,3 +103,11 @@ The action returns descriptive error messages for:
 - Column indexing is 0-based (first data column = column 0)
 - Time tolerance for matching is defined by the `actions.Tolerance` constant
 - Destination file must exist in the container's local model directory
+
+## Patterns and Best Practices
+
+- Ensure destination files exist before running the action
+- Validate that source datasets contain the expected time-series structure
+- Use consistent timestamp formats between source and destination
+- Test with small datasets before processing large files
+- Maintain proper S3 store configuration with required "root" parameter

@@ -1,17 +1,12 @@
-# Developer Documentation: update-bfile-skip-dss.go
+# update-bfile-skip-dss
 
-## Overview
+## Description
 
-The `update-bfile-skip-dss` action modified the RAS bFile by appending a predefined skip DSS command if it's not already present. This is used to instruct the HECRAS linux runtime to skip exporting DSS following a model run. 
+The `update-bfile-skip-dss` action modifies a specified RAS bFile by appending a predefined SKIPDSS command if it's not already present. This is used to instruct the HECRAS linux runtime to skip exporting DSS following a model run.
 
+## Implementation Details
 
-## Purpose
-Executes the action to update a specified bFile by appending the SKIPDSS command if it's not already present.
-
-### Parameters
-- **None**: The function relies on attributes set during action initialization, particularly:
-  - `bFile`: The name of the bFile to be updated.
-  - `ModelDir` (optional): Directory path where the bFile is located.
+This action modifies files in place and assumes that the necessary files are already present in a local directory accessible to the runner. The appended text is a specific format expected by HEC RAS linux runtime version 6.x.
 
 ### Process Flow
 
@@ -27,14 +22,22 @@ Executes the action to update a specified bFile by appending the SKIPDSS command
 7. **File Writing**:
    - Writes the modified content back to the same file with permissions set to 0600 (read/write for owner only).
 
-### Error Handling
+## Configuration
 
-- Returns errors if:
-  - The specified bFile is not found in the local directory.
-  - File reading fails.
-  - File writing fails.
+### Environment
 
-## Usage Example
+- `MODEL_DIR`: Default directory path in the running container where the bFile is located (used when `ModelDir` is not specified)
+
+### Attributes
+
+- `bFile` (required): The name of the bFile to be updated
+- `ModelDir` (optional): Directory path where the bFile is located
+
+### Action
+
+- Action type: `update-bfile-skip-dss`
+
+## Configuration Example
 
 ```json
 {
@@ -49,9 +52,16 @@ Executes the action to update a specified bFile by appending the SKIPDSS command
 }
 ```
 
-This action should be run after ensuring the bFile has been copied locally using the `copy-local` action to ensure the file exists in the expected local directory.
+### Error Handling
 
-## Implementation Notes
+- Returns errors if:
+  - The specified bFile is not found in the local directory.
+  - File reading fails.
+  - File writing fails.
+
+
+## Usage Notes
+This action should be run after ensuring the bFile has been copied locally using the `copy-local` action to ensure the file exists in the expected local directory.
 
 - This action modifies files in place.
 - It assumes that the necessary files are already present in a local directory accessible to the runner.

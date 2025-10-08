@@ -1,23 +1,43 @@
 # Update Breach Data Action
 
-This action updates breach elevations in a b-file based on fragility curve results.
+## Description
+This action updates breach elevations in a b-file based on fragility curve results. It is designed to update the breach data in a RAS model, particularly when dealing with dam breach scenarios where failure elevations need to be updated.
 
-## Overview
+## Implementation Details
+The action reads a fragility curve output file and amends breach elevations in a b-file. It initializes a BFile object from the b-file, creates an SNET ID to name map from the geometry HDF file, reads and parses the fragility curve results, and then updates breach elevations in the b-file based on fragility curve results.
 
-The `update-breach-bfile` action reads a fragility curve output file and amends breach elevations in a b-file. It's designed to update the breach data in a RAS model, particularly when dealing with dam breach scenarios where failure elevations need to be updated.
+## Process Flow
+1. Initialize BFile object from b-file
+2. Create SNET ID to name map from geometry HDF file
+3. Load and parse fragility curve results from fcFile
+4. Update breach elevations in b-file based on fragility curve results
+5. Write updated b-file back to disk
 
-## Action Configuration
+## Configuration
 
-### Required Parameters
+### Environment
+- Requires RAS model directory with all input files
+- Files must be accessible and properly formatted
 
-| Parameter      | Description                              |
+### Attributes
+
+#### Action
+
+| Attribute      | Description                              |
 |----------------|------------------------------------------|
 | `bFile`        | Name of the b-file to update             |
 | `fcFile`       | Name of the fragility curve results file |
 | `geoHdfFile`   | Name of the geometry HDF file            |
 
-### Example Configuration
+### Input Files
+- **bFile**: The RAS b-file containing breach data to be updated
+- **fcFile**: JSON file containing fragility curve results with failure elevations
+- **geoHdfFile**: HDF file containing geometry information for SNET ID mapping
 
+### Output
+The action modifies the b-file in place, updating breach elevation data.
+
+## Configuration Example
 ```json
 {
   "action": {
@@ -31,24 +51,6 @@ The `update-breach-bfile` action reads a fragility curve output file and amends 
   }
 }
 ```
-
-## How It Works
-
-1. **Initialization**: The action reads the b-file and initializes a BFile object
-2. **Geometry Mapping**: Creates an SNET ID to name map from the geometry HDF file
-3. **Fragility Curve Loading**: Reads and parses the fragility curve results
-4. **Breach Elevation Update**: Amends breach elevations in the b-file based on fragility curve results
-5. **Output**: Writes the updated b-file back to disk
-
-## File Requirements
-
-### Input Files
-- **bFile**: The RAS b-file containing breach data to be updated
-- **fcFile**: JSON file containing fragility curve results with failure elevations
-- **geoHdfFile**: HDF file containing geometry information for SNET ID mapping
-
-### Output
-The action modifies the b-file in place, updating breach elevation data.
 
 ## Error Handling
 
@@ -71,11 +73,3 @@ This action should be run after copying local files using the `copy-local` actio
   ]
 }
 ```
-
-## Test Requirements
-
-The action can be tested with unit tests that:
-- Verify file paths are correctly constructed
-- Confirm fragility curve results are properly loaded and parsed
-- Validate breach elevation updates occur successfully
-- Check error handling for missing or invalid files

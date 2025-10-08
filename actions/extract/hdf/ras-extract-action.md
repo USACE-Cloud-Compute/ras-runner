@@ -1,8 +1,12 @@
-# RAS-Runner: RAS Extract Action Documentation
+# RAS Extract Action
+
+## Description
 
 The **RAS Extract Action** is designed to extract user-defined datasets from RAS HDF5 files following a successful HEC-RAS model run. The extracted data can be written to more accessible formats such as JSON and Console STDOUT. Future support for cloud-native array stores (e.g., TileDB or Zarr) is planned.
 
-## Overview
+
+
+# Implementation Details
 
 The RAS Extract Action supports three primary extraction methods:
 
@@ -12,8 +16,20 @@ The RAS Extract Action supports three primary extraction methods:
 
 Each method allows users to define how data should be extracted, processed, and outputted based on their specific needs.
 
----
-## Globally Required Attributes
+## Process Flow
+
+1. The action is triggered with a configuration specifying the extraction method and parameters.
+2. The HDF5 file is accessed using the provided `modelPrefix` and `plan`.
+3. Based on the extraction type (dataset, group, or attribute), the appropriate data is read from the HDF5 file.
+4. Data processing occurs according to the specified `postprocess` functions if `writesummary` is enabled.
+5. The results are either written directly to the specified output or accumulated for later writing via `outputDataSource`.
+
+## Configuration
+
+### Environment
+
+### AttributesAttributes
+
 These parameters are required for all extraction actions and can be included in either payload attributes or action attributes:
 
 ```json
@@ -29,7 +45,7 @@ These parameters are required for all extraction actions and can be included in 
 
 ---
 
-## 1. Dataset Extraction
+#### 1. Dataset Extraction Attributes
 
 A dataset can be extracted from an HDF5 file into the specified output format. Both raw data and summary values (max or min) are supported.
 
@@ -49,13 +65,12 @@ A dataset can be extracted from an HDF5 file into the specified output format. B
     "writesummary": true,
     "datatype": "float32",
     "block-name": "refline_peak_flow",
-    "accumulate-results": true,
     "outputDataSource": "metadataout"
   }
 }
 ```
 
-### Attributes
+#### Attributes
 
 | Attribute             | Description |
 |-----------------------|-------------|
@@ -178,11 +193,37 @@ Attributes from datasets or groups can be extracted and formatted as key-value p
 
 ---
 
+### Inputs
+
+- HDF5 file containing RAS model output data
+- Configuration specifying extraction parameters
+
+### Input Data Sources
+
+- HDF5 file path derived from `modelPrefix` and `plan`
+
+### Outputs
+
+- Extracted data in JSON or console format
+- Accumulated results ready for final writing via the configured output data source
+- Direct output to console when `outputformat` is `"console"`
+
 ## Output Data Format
+- For JSON output, refer to the [JSON Specification](#json-spec) for schema details.
 
-For JSON output, refer to the [JSON Specification](#json-spec) for schema details.
 
----
+## Error Handling
+
+- Invalid `outputformat` values will result in an error
+- Missing required attributes will cause configuration validation failures
+- Invalid HDF5 paths will lead to read errors
+- Mutually exclusive `accumulate-results` and `outputDataSource` will trigger an error
+
+## Usage Notes
+
+- Either `accumulate-results` or `outputDataSource` must be specified, but not both
+- The `grouppath` and `match`/`exclude` parameters allow for fine-grained dataset selection
+- When using `accumulate-results`, ensure that `outputDataSource` is configured to write the final results
 
 ## Future Enhancements
 
@@ -190,23 +231,8 @@ Support for additional formats like **TileDB** and **Zarr** is planned. These wi
 
 --- 
 
-## Appendix: Common Patterns and Best Practices
-
-### Accumulation vs Direct Writing
-Use `accumulate-results: true` when you want to collect multiple extractions before writing them to a final file. This is useful for aggregating results across many sub-extractions.
-
-To write accumulated data, specify `outputDataSource` in the configuration:
-```json
-{
-  "name": "metadataout",
-  "paths": {
-    "extract": "final_output.json"
-  },
-  "store_name": "FFRD"
-}
-```
-
-### Matching Datasets with Regular Expressions
+### Patterns and Best Practices
+#### regular expression pattern matching for groups and datasets
 When using group extractions, regex matching allows fine-grained control over which datasets are processed:
 ```json
 "match": ".*Flow.*",
@@ -214,11 +240,33 @@ When using group extractions, regex matching allows fine-grained control over wh
 ```
 This example matches all datasets containing “Flow” but excludes those with “per Face”.
 
----
+#### Accumulation vs Direct Writing
+Use `accumulate-results: true` when you want to collect multiple extractions before writing them to a final file. This is useful for aggregating results across many sub-extractions.
 
-## Summary
+To write accumulated data, specify an output dataset in the configuration:
+```json
+outputs[
+  {
+    "name": "metadataout",
+    "paths": {
+      "extract": "final_output.json"
+    },
+    "store_name": "FFRD"
+  }
+]
 
-The RAS Extract Action provides flexible and powerful extraction capabilities for RAS model outputs stored in HDF5 format. Whether extracting individual datasets, enumerating groups, or extracting metadata attributes, the tool supports customizable configurations to suit various analytical workflows.
+...
 
-For further assistance or updates on new features, please refer to the official documentation or contact support.
+actions[
+  {
+    "name": "ras-extract",
+    "type": "extract",
+    "description": "refline-flow",
+    "attributes": {
+      //...extract config
+      "outputDataSource": "metadataout"
+    }
+  }
+]
+```
 
