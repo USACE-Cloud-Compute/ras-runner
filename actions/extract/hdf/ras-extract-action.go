@@ -61,7 +61,7 @@ func (a *RasExtractAction) Run() error {
 		plan = a.PluginManager.Attributes.GetStringOrFail("plan")
 	}
 
-	modelResultsPath := fmt.Sprintf("%s/%s.p%s.hdf", actions.MODEL_DIR, modelPrefix, plan)
+	modelResultsPath := fmt.Sprintf("%s/%s.p%s.tmp.hdf", actions.MODEL_DIR, modelPrefix, plan)
 
 	blockName := a.Action.Attributes.GetStringOrDefault("block-name", "data")
 

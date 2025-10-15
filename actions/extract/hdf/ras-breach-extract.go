@@ -23,23 +23,30 @@ const (
 	// breachDataPath is the path suffix for breaching variables data.
 	breachDataPath string = "/%s/Breaching Variables"
 
-	// BreachFlowColumn is the column index for flow data in breaching variables.
-	BreachFlowColumn int = 6
+	BreachFlowColumnName     string = "Breach Flow"
+	BreachVelocityColumnName string = "Breach Velocity"
+	BottomWidthColumnName    string = "Bottom-Width"
+	HwColumnName             string = "Stage HW"
+	TwColumnName             string = "Stage TW"
 
-	// BreachVelocityFpsColumn is the column index for velocity data in breaching variables.
-	BreachVelocityFpsColumn int = 7
+	// // BreachFlowColumn is the column index for flow data in breaching variables.
+	// BreachFlowColumn int = 6
 
-	// BottomWidthColumn is the column index for bottom width data in breaching variables.
-	BottomWidthColumn int = 2
+	// // BreachVelocityFpsColumn is the column index for velocity data in breaching variables.
+	// BreachVelocityFpsColumn int = 7
 
-	// HwColumn is the column index for HW (Stage) data in breaching variables.
-	HwColumn int = 0
+	// // BottomWidthColumn is the column index for bottom width data in breaching variables.
+	// BottomWidthColumn int = 2
 
-	// TwColumn is the column index for TW (Stage) data in breaching variables.
-	TwColumn int = 1
+	// // HwColumn is the column index for HW (Stage) data in breaching variables.
+	// HwColumn int = 0
+
+	// // TwColumn is the column index for TW (Stage) data in breaching variables.
+	// TwColumn int = 1
 
 	// BreachFlowVelocityThreshold is the velocity threshold to determine breach progression duration.
 	BreachFlowVelocityThreshold float32 = 1.5
+	BreachFields                string  = "Variable_Unit"
 )
 
 // BreachData represents the breach data extracted from an HDF5 file.
@@ -55,6 +62,30 @@ type BreachData struct {
 
 	// TimeInDays contains the time steps in days.
 	TimeInDays []float64
+
+	//private variable for Variable_Units field definitions
+	fields [][]string
+}
+
+func (bd *BreachData) ColumnIndexMap() map[string]int {
+	bnames := []string{
+		BreachFlowColumnName,
+		BreachVelocityColumnName,
+		BottomWidthColumnName,
+		HwColumnName,
+		TwColumnName,
+	}
+	indexMap := make(map[string]int)
+
+	for i, cname := range bd.fields {
+		for _, bname := range bnames {
+			if cname[0] == bname {
+				indexMap[bname] = i
+			}
+		}
+	}
+
+	return indexMap
 }
 
 type RasBreach struct {
@@ -176,6 +207,13 @@ func (rb *RasBreach) readBreachAttributes(bd *BreachData, datapath string) error
 	bd.BreachAt = breachAt
 	getattr(ds, "Breach at Time (Days)", &breachTime) //ignore errors and return default on error
 	bd.BreachAtTime = breachTime
+
+	fields, err := get2dStringArrayAttr(ds, BreachFields)
+	if err != nil {
+		return err
+	}
+	bd.fields = fields
+
 	return nil
 }
 
@@ -249,6 +287,15 @@ func getattr(ds *hdf5.Dataset, attrname string, dest any) error {
 	}
 }
 
+func get2dStringArrayAttr(ds *hdf5.Dataset, attrname string) ([][]string, error) {
+	attr, err := ds.OpenAttribute(attrname)
+	if err != nil {
+		return nil, err
+	}
+	defer attr.Close()
+	return attr.ReadFixedStringArray()
+}
+
 /////////////////////////////////////////////////////////////////
 
 type BreachRecord struct {
@@ -292,6 +339,12 @@ func GetBreachRecord(event string, flowarea2d string, connectionname string, bd 
 	br.FlowArea2D = flowarea2d
 	br.SaConn = connectionname
 	breachTimeIndex := breachAtTimeIndex(bd)
+	breachColIndexMap := bd.ColumnIndexMap()
+	HwColumn := breachColIndexMap[HwColumnName]
+	TwColumn := breachColIndexMap[TwColumnName]
+	BottomWidthColumn := breachColIndexMap[BottomWidthColumnName]
+	BreachFlowColumn := breachColIndexMap[BreachFlowColumnName]
+	BreachVelocityFpsColumn := breachColIndexMap[BreachVelocityColumnName]
 	if bd != nil {
 		br.Event = event
 		br.Breached = !math.IsNaN(float64(bd.BreachAtTime))

@@ -72,10 +72,14 @@ github.com/usace/cc-go-sdk v0.0.0-20250916200307-2e0479aec7c8 h1:YvU6hDNxHGvKzQt
 github.com/usace/cc-go-sdk v0.0.0-20250916200307-2e0479aec7c8/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
 github.com/usace/cc-go-sdk v0.0.0-20250922162017-983c330e2209 h1:Z/28DWZvQ9VxQ6NlFV/6jwlLXOs9i/6+vrI3vQ9uRbY=
 github.com/usace/cc-go-sdk v0.0.0-20250922162017-983c330e2209/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
+github.com/usace/cc-go-sdk v0.0.0-20251014151345-652ad9672b7d h1:nXaUu3UKjEwN0I8oHE0k6pzdN7sFcb3VUuI9+344BPs=
+github.com/usace/cc-go-sdk v0.0.0-20251014151345-652ad9672b7d/go.mod h1:ZWHkv/kUty88wY4bp2MtW90AgKkY4gEClpmEYMEaZ0Q=
 github.com/usace/filesapi v0.0.0-20250320132414-61c781325b9a h1:VEbsvUAkfZuZbA32GfKG5ZFh+OFd1wD6hahoO/fixaQ=
 github.com/usace/filesapi v0.0.0-20250320132414-61c781325b9a/go.mod h1:WugbEcTmSG0hzM44yaY67GCdhITD2Wx6zQI3rMmdSt8=
 github.com/usace/go-hdf5 v0.0.0-20250905114727-9cd0fd2d5ff7 h1:3rsiho7bA8TOgl4GAUPJ4vxqDWEm6Z8jzYrXTq2xrZ8=
 github.com/usace/go-hdf5 v0.0.0-20250905114727-9cd0fd2d5ff7/go.mod h1:7UnGKc/bXuT03VYfEx/Od6Jq0zmBMoH0jEVMESxnyLg=
+github.com/usace/go-hdf5 v0.0.0-20251010161119-8689246c233d h1:3mGR5J/prBCCS9H3NeeR6zO2sH4/PBW71pR+DCIlJfY=
+github.com/usace/go-hdf5 v0.0.0-20251010161119-8689246c233d/go.mod h1:7UnGKc/bXuT03VYfEx/Od6Jq0zmBMoH0jEVMESxnyLg=
 github.com/usace/hdf5utils v0.0.0-20250919115646-33cb8997d656 h1:BzfJwhKV4CCK8i/MI0Of+f2yGScK0xDQ5NOwTAODTdc=
 github.com/usace/hdf5utils v0.0.0-20250919115646-33cb8997d656/go.mod h1:fzF9sL4MXd8+4PG8of6NR3ZYQZQhmQCdNTzL8vl/ez4=
 github.com/wk8/go-ordered-map/v2 v2.1.8 h1:5h/BUHu93oj4gIdvHHHGsScSTMijfx5PeYkE/fJgbpc=

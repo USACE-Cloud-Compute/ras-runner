@@ -9,8 +9,8 @@ toolchain go1.23.10
 //replace github.com/usace/cc-go-sdk => /workspaces/cc-go-sdk
 
 require (
-	github.com/usace/cc-go-sdk v0.0.0-20250922162017-983c330e2209
-	github.com/usace/go-hdf5 v0.0.0-20250905114727-9cd0fd2d5ff7
+	github.com/usace/cc-go-sdk v0.0.0-20251014151345-652ad9672b7d
+	github.com/usace/go-hdf5 v0.0.0-20251010161119-8689246c233d
 	github.com/usace/hdf5utils v0.0.0-20250919115646-33cb8997d656
 )
 

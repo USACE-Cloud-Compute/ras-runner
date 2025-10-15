@@ -16,7 +16,7 @@ const (
 	rasModelSummaryPath                    string = "/Results/Unsteady/Summary"
 	rasModelSummarySolutionAttrName        string = "Solution"
 	rasModelSummarySolutionSuccessCriteria string = "Finished Successfully"
-	outputDataSourcePathKey                string = "hdf"
+	outputDataSourcePathKey                string = "output"
 	outputLogDataSourcePathKey             string = "log"
 )
 
