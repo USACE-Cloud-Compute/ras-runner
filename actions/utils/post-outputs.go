@@ -8,6 +8,10 @@ import (
 	"github.com/usace/cc-go-sdk"
 )
 
+const (
+	defaultDatasourcePath string = "default"
+)
+
 func init() {
 	cc.ActionRegistry.RegisterAction("post-outputs", &PostOutputsAction{})
 }
@@ -17,17 +21,16 @@ type PostOutputsAction struct {
 }
 
 func (a *PostOutputsAction) Run() error {
-	err := postOuptutFiles(a.PluginManager)
+	err := postOutputFiles(a.PluginManager)
 	if err != nil {
 		return fmt.Errorf("failed to post outputs: %s", err)
 	}
 	return nil
 }
 
-func postOuptutFiles(pm *cc.PluginManager) error {
-	//this code is intended to be updated in the future to be more clean, for now it is structured to work without changing any previous actions, and is written with an out of date sdk to support multiple project.s
-	modelPrefix := pm.Payload.Attributes["modelPrefix"].(string)
-	plan := pm.Payload.Attributes["plan"].(string)
+func postOutputFiles(pm *cc.PluginManager) error {
+	modelPrefix := pm.Attributes.GetStringOrFail("modelPrefix")
+	plan := pm.Attributes.GetStringOrFail("plan")
 	reservedfilename := fmt.Sprintf("%s.p%s.tmp.hdf", modelPrefix, plan)
 	for _, ds := range pm.Outputs {
 		err := func() error {
@@ -43,11 +46,11 @@ func postOuptutFiles(pm *cc.PluginManager) error {
 			return pm.CopyFileToRemote(cc.CopyFileToRemoteInput{
 				LocalPath:       fmt.Sprintf("%s/%s", actions.MODEL_DIR, ds.Name),
 				RemoteStoreName: ds.Name,
-				RemotePath:      "0",
+				RemotePath:      defaultDatasourcePath,
 			})
 		}()
 		if err != nil {
-			log.Printf("Error fetching %s", ds.Paths["0"])
+			log.Printf("Error fetching %s", ds.Paths[defaultDatasourcePath])
 			return err
 		}
 	}
