@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	cc.ActionRegistry.RegisterAction("update-bfile-skip-dss", &UpdateBfileAction{})
+	cc.ActionRegistry.RegisterAction("update-bfile-skip-dss", &UpdateBfileSkipDSSAction{})
 }
 
 const SKIPDSS = "Extra Commands\n1\nSKIP_HDF_DSS"
