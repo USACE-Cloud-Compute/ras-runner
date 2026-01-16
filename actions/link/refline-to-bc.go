@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"ras-runner/actions"
 	"ras-runner/actions/utils"
 	"reflect"
@@ -24,14 +25,10 @@ type ReflineToBc struct {
 }
 
 func (a *ReflineToBc) Run() error {
-	//@TODO need string length
 	log.Printf("Updating refline to boundary condition %s\n", a.Action.Description)
 	refline := a.Action.Attributes["refline"].(string)
-	//srcname := a.Action.Attributes["src"].(map[string]any)["name"].(string)
-	//srcdatapath := a.Action.Attributes["src"].(map[string]any)["datapath"].(string)
-	//dest := a.Action.Attributes["dest"].(map[string]any)["name"].(string)
-	//destdatapath := a.Action.Attributes["dest"].(map[string]any)["datapath"].(string)
 
+	useRemote := a.Action.Attributes.GetBooleanOrDefault("use-remote-reads",true)
 	src, err := a.Action.IOManager.GetInputDataSource("source")
 	if err != nil {
 		return fmt.Errorf("error getting input source %s: %s", "source", err)
@@ -45,7 +42,7 @@ func (a *ReflineToBc) Run() error {
 	if err != nil {
 		return fmt.Errorf("error getting input source %s: %s", "source", err)
 	}
-	err = MigrateRefLineData(src.Paths["hdf"], srcstore, src.DataPaths["refline"], dest.Paths["hdf"], dest.DataPaths["bcline"], refline)
+	err = MigrateRefLineData(src.Paths["hdf"], srcstore, src.DataPaths["refline"], dest.Paths["hdf"], dest.DataPaths["bcline"], refline, useRemote)
 	if err != nil {
 		return fmt.Errorf("failed to migrate refline data: %s", err)
 	}
@@ -55,12 +52,14 @@ func (a *ReflineToBc) Run() error {
 	return nil
 }
 
-func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, refline string) error {
-	if srcstore.StoreType == "S3" {
+func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, refline string, useRemote bool) error {
+	if useRemote {
 		profile := srcstore.DsProfile
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
 		template := os.Getenv("HDF_AWS_S3_TEMPLATE")
 		src = fmt.Sprintf(template, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
+	}else{
+		src = fmt.Sprintf("%s/%s", actions.MODEL_DIR, filepath.Base(src))
 	}
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
 	if err != nil {
