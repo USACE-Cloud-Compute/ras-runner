@@ -12,4 +12,4 @@ RAS_EXE_PATH=/ras:/ras/bin
 export PATH=$RAS_EXE_PATH:$PATH
 
 cd $MODELDIR
-RasUnsteady $2.c$3 b$4
+RasUnsteady $2.c$4 b$3

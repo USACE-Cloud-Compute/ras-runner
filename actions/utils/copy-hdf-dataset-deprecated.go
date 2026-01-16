@@ -12,9 +12,19 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+const (
+	nameField         = "name"
+	dataPathField     = "datapath"
+	srcDataSourcePath = "hdf"
+)
+
 func init() {
 	cc.ActionRegistry.RegisterAction("copy-hdf", &CopyHdfDatasetAction{})
 }
+
+/*
+	copies content of one hdf5 data file into another one that is local
+*/
 
 type CopyHdfDatasetAction struct {
 	cc.ActionRunnerBase
@@ -23,10 +33,21 @@ type CopyHdfDatasetAction struct {
 func (a *CopyHdfDatasetAction) Run() error {
 	log.Printf("Ready to copy %s\n", a.Action.Description)
 
-	srcname := a.Action.Attributes["src"].(map[string]any)["name"].(string)
-	srcdatapath := a.Action.Attributes["src"].(map[string]any)["datapath"].(string)
-	dest := a.Action.Attributes["dest"].(map[string]any)["name"].(string)
-	destdatapath := a.Action.Attributes["dest"].(map[string]any)["datapath"].(string)
+	srcconfig, err := a.Action.Attributes.GetMap("src")
+	if err != nil {
+		return fmt.Errorf("missing src attribute data")
+	}
+
+	destconfig, err := a.Action.Attributes.GetMap("dest")
+	if err != nil {
+		return fmt.Errorf("missing dest attribute data")
+	}
+
+	//this type assertion is ugly but since we are stopping on error, a panic is ok
+	srcname := srcconfig[nameField].(string)
+	srcdatapath := srcconfig[dataPathField].(string)
+	dest := destconfig[nameField].(string)
+	destdatapath := destconfig[dataPathField].(string)
 
 	src, err := a.PluginManager.GetInputDataSource(srcname)
 	if err != nil {
@@ -41,7 +62,7 @@ func (a *CopyHdfDatasetAction) Run() error {
 	log.Printf("%s::::%s", dest, srcstore)
 	log.Printf("finished creating temp for %s\n", a.Action.Description)
 
-	return CopyHdf5Dataset(src.Paths["0"], srcdatapath, srcstore, dest, destdatapath)
+	return CopyHdf5Dataset(src.Paths[srcDataSourcePath], srcdatapath, srcstore, dest, destdatapath)
 }
 
 func CopyHdf5Dataset(src string, srcdataset string, srcstore *cc.DataStore, dest string, destdataset string) error {

@@ -15,15 +15,35 @@ import (
 	"github.com/usace/hdf5utils"
 )
 
+const (
+	reflineAttrName = "refline"
+)
+
 func init() {
 	cc.ActionRegistry.RegisterAction("refline-to-boundary-condition", &ReflineToBc{})
 }
 
-// refline to boundary condition
+// ReflineToBc reads reference line data from HDF5 RAS output files and writes it to boundary condition datasets in HDF5 RAS input files.
+//
+// This action facilitates the transfer of reference line flow data from RAS output results to boundary conditions in RAS input models.
+// Unlike the column-to-boundary-condition action, this action assumes that the time arrays in source and destination datasets are identical
+// and does not perform time matching between datasets.
 type ReflineToBc struct {
 	cc.ActionRunnerBase
 }
 
+// Run executes the refline-to-boundary-condition action.
+//
+// It performs the following steps:
+// 1. Retrieves the reference line name from action attributes
+// 2. Gets source and destination data sources from IOManager
+// 3. Calls MigrateRefLineData to process the data transfer
+// 4. Returns any errors encountered during processing
+//
+// The action requires:
+// - "refline" attribute specifying which reference line to extract
+// - "source" configuration with name and datapath for input data
+// - "destination" configuration with name and datapath for output data
 func (a *ReflineToBc) Run() error {
 	log.Printf("Updating refline to boundary condition %s\n", a.Action.Description)
 	refline := a.Action.Attributes["refline"].(string)
@@ -38,10 +58,12 @@ func (a *ReflineToBc) Run() error {
 	if err != nil {
 		return fmt.Errorf("error getting input store %s: %s", src.StoreName, err)
 	}
+
 	dest, err := a.Action.IOManager.GetOutputDataSource("destination")
 	if err != nil {
 		return fmt.Errorf("error getting input source %s: %s", "source", err)
 	}
+
 	err = MigrateRefLineData(src.Paths["hdf"], srcstore, src.DataPaths["refline"], dest.Paths["hdf"], dest.DataPaths["bcline"], refline, useRemote)
 	if err != nil {
 		return fmt.Errorf("failed to migrate refline data: %s", err)
@@ -61,6 +83,7 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 	}else{
 		src = fmt.Sprintf("%s/%s", actions.MODEL_DIR, filepath.Base(src))
 	}
+
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
 	if err != nil {
 		return err
@@ -102,6 +125,7 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		File:         srcfile,
 		ReadOnCreate: true,
 	})
+
 	if err != nil {
 		return err
 	}
@@ -112,7 +136,7 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		name := []string{}
 		err := refLineNames.ReadRow(i, &name)
 		if err != nil || len(name) == 0 {
-			return errors.New("Error reading Reference Line Names")
+			return errors.New("error reading reference line Names")
 		}
 		fmt.Println(refline)
 		fmt.Println(name[0])
@@ -121,11 +145,14 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		}
 	}
 	if refLineColumnIndex < 0 {
-		return errors.New(fmt.Sprintf("Invalid Reference Line: %s\n", refline))
+		return fmt.Errorf("invalid reference line: %s", refline)
 	}
 
 	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
 	_, err = os.Stat(destpath)
+	if err != nil {
+		return err
+	}
 
 	var destfile *hdf5.File
 

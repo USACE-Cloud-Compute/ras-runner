@@ -14,6 +14,10 @@ import (
 	"github.com/usace/go-hdf5"
 )
 
+const (
+	srcRasTempPath string = "default"
+)
+
 var RasTmpDatasets []string = []string{"Geometry", "Plan Data", "Event Conditions"}
 
 func init() {
@@ -60,7 +64,7 @@ func (a *CreateRasTmpAction) Run() error {
 		err = a.PluginManager.CopyFileToRemote(cc.CopyFileToRemoteInput{
 			LocalPath:    destpath,
 			RemoteDsName: remote_dest_name,
-			DsPathKey:    "0",
+			DsPathKey:    srcRasTempPath,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to copy file to remote location: %s", err)
@@ -142,8 +146,6 @@ func MakeRasHdfTmp(src string, local_dest string) error {
 				}
 
 				err = sdt.SetSize(len(attrdata))
-				//fmt.Println(sdt.Size())
-				//fmt.Println(attrdata)
 				if err != nil {
 					return err
 				}

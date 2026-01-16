@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 	//_ "actions/utils"
 )
 
@@ -51,4 +52,17 @@ func EncodeUrlPath(src string) string {
 func TimePath(datapath string) string {
 	tsroot := datapath[:strings.Index(datapath, "Unsteady Time Series")]
 	return tsroot + RASTIMEPATH
+}
+
+func RetryWithBackoff(maxRetries int, delay time.Duration, fn func() error) error {
+	var err error
+	for i := 0; i < maxRetries; i++ {
+		err = fn()
+		if err == nil {
+			return nil
+		}
+		time.Sleep(delay)
+		delay *= 2 // exponential backoff
+	}
+	return err
 }

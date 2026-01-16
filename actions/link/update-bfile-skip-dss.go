@@ -21,6 +21,7 @@ type UpdateBfileSkipDSSAction struct {
 	ModelDir string
 }
 
+// instruct the linux engine not to write DSS
 func (uba *UpdateBfileSkipDSSAction) Run() error {
 	// Assumes bFile and fragility curve file  were copied local with the CopyLocal uba.Action.
 	log.Printf("Ready to update bFile.")
