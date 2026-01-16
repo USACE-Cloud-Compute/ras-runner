@@ -39,7 +39,6 @@ func (a *HdftoHdfDatasetAction) Run() error {
 		return fmt.Errorf("missing output source named dest")
 	}
 
-	//this type assertion is ugly but since we are stopping on error, a panic is ok
 	if len(src.DataPaths) != len(dest.DataPaths) {
 		return fmt.Errorf("src and dest datapath lengths do not match")
 	}
