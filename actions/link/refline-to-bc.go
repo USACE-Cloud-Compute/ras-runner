@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"ras-runner/actions"
+	"ras-runner/actions/utils"
 	"reflect"
 
 	"github.com/usace/cc-go-sdk"
@@ -58,7 +59,8 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 	if srcstore.StoreType == "S3" {
 		profile := srcstore.DsProfile
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
-		src = fmt.Sprintf(actions.S3BucketTemplate, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
+		template := os.Getenv("HDF_AWS_S3_TEMPLATE")
+		src = fmt.Sprintf(template, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
 	}
 	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
 	if err != nil {
@@ -89,9 +91,15 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 	defer refLineVals.Close()
 
 	//get the reference line positions
+	mt := utils.DatasetMetadata
+	attr, err := utils.GetAttrMetadata(srcfile, mt, src_datapath+"/Name", "")
+	if err != nil {
+		return err
+	}
+
 	refLineNames, err := hdf5utils.NewHdfDataset(src_datapath+"/Name", hdf5utils.HdfReadOptions{
 		Dtype:        reflect.String,
-		Strsizes:     hdf5utils.NewHdfStrSet(43),
+		Strsizes:     hdf5utils.NewHdfStrSet(int(attr.AttrSize)),
 		File:         srcfile,
 		ReadOnCreate: true,
 	})
@@ -107,7 +115,8 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		if err != nil || len(name) == 0 {
 			return errors.New("Error reading Reference Line Names")
 		}
-
+		fmt.Println(refline)
+		fmt.Println(name[0])
 		if refline == name[0] {
 			refLineColumnIndex = i
 		}
