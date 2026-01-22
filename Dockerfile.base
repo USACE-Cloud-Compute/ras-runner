@@ -1,25 +1,23 @@
-FROM rockylinux:8
+FROM ubuntu:24.04
 
-RUN yum -y update &&\ 
-    yum -y install git &&\
-    yum -y install wget &&\
-    yum -y install unzip &&\
-    yum -y install gcc &&\
-    yum -y install gcc-c++ &&\
-    yum -y install make &&\
-    yum -y install libcurl-devel.x86_64 &&\
-    yum -y install openssl-devel.x86_64 &&\
-    mkdir  /ras
+ARG HDF5_PREFIX=/usr/local/lib/hdf5
+ARG HDF5_VERSION=1.14.5
 
-#set up HDF, AK commmented rasmapperlib is using 1.12. may cause issues.  
-ARG HDF_FILE=hdf5-1.14.3.tar.gz 
-ARG HDF_NEXUS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/hdf/hdf5-1.14.3.tar.gz
-ENV LD_LIBRARY_PATH=/hdf/lib
+ENV TZ=America/New_York
+ENV CGO_LDFLAGS="-L/${HDF5_PREFIX}/lib"
+ENV CGO_CFLAGS="-I/${HDF5_PREFIX}/include"
+ENV LD_LIBRARY_PATH=${HDF5_PREFIX}/lib
 
-RUN wget ${HDF_NEXUS_URL} &&\
-    mkdir /hdfsrc &&\
-    tar -xvzf ${HDF_FILE} --directory /hdfsrc --strip 2 &&\ 
-    cd /hdfsrc &&\
-    ./configure --prefix=/hdf --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &&\
+    apt update &&\
+    apt -y install build-essential &&\
+    apt -y install wget &&\
+    apt -y install openssl libssl-dev &&\
+    apt -y install curl libcurl4-openssl-dev &&\
+    apt -y install zip &&\
+    wget https://support.hdfgroup.org/releases/hdf5/v1_14/v1_14_5/downloads/hdf5-${HDF5_VERSION}.tar.gz &&\
+    tar -xvzf /hdf5-${HDF5_VERSION}.tar.gz &&\ 
+    cd /hdf5-${HDF5_VERSION} &&\
+    ./configure --prefix=${HDF5_PREFIX} --with-default-api-version=v110 --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported &&\
     make &&\
-    make install
+    make install    

@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"unsafe"
 
-	"github.com/usace/cc-go-sdk"
-	"github.com/usace/go-hdf5"
+	"github.com/usace-cloud-compute/cc-go-sdk"
+	"github.com/usace-cloud-compute/go-hdf5"
 )
 
 const (

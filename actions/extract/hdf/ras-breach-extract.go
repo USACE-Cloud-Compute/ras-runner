@@ -7,10 +7,11 @@ import (
 	"log"
 	"math"
 	"os"
+	"ras-runner/actions/utils"
 	"reflect"
 
-	"github.com/usace/go-hdf5"
-	"github.com/usace/hdf5utils"
+	"github.com/usace-cloud-compute/go-hdf5"
+	"github.com/usace-cloud-compute/go-hdf5/util"
 )
 
 const (
@@ -98,7 +99,7 @@ type RasBreach struct {
 // It opens the specified HDF5 file and returns a pointer to RasBreach.
 // Returns an error if the file cannot be opened or read.
 func NewRasBreachData(filepath string) (*RasBreach, error) {
-	f, err := hdf5utils.OpenFile(filepath)
+	f, err := util.OpenFile(filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +120,7 @@ func (rb *RasBreach) Close() {
 // Returns an error if the group cannot be accessed or read.
 func (rb *RasBreach) FlowAreas2D() ([]string, error) {
 	groupPath := "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas"
-	group, err := hdf5utils.NewHdfGroup(rb.f, groupPath)
+	group, err := utils.NewHdfGroup(rb.f, groupPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read the hdf group '%s': %s", groupPath, err)
 	}
@@ -222,13 +223,13 @@ func (rb *RasBreach) readBreachAttributes(bd *BreachData, datapath string) error
 // It returns a slice of float64 values representing the time steps in days.
 // Returns an error if the time step data cannot be read.
 func (rb *RasBreach) readTimeSteps() ([]float64, error) {
-	options := hdf5utils.HdfReadOptions{
+	options := util.HdfReadOptions{
 		Dtype:        reflect.Float64,
 		ReadOnCreate: true,
 		File:         rb.f,
 	}
 
-	data, err := hdf5utils.NewHdfDataset(timeStepInDaysPath, options)
+	data, err := util.NewHdfDataset(timeStepInDaysPath, options)
 	if err != nil {
 		return nil, err
 	}
@@ -243,13 +244,13 @@ func (rb *RasBreach) readTimeSteps() ([]float64, error) {
 // It returns a 2D slice of float32 values representing the breaching variables data.
 // Returns an error if the data cannot be read.
 func (rb *RasBreach) readBreachData(datapath string) ([][]float32, error) {
-	options := hdf5utils.HdfReadOptions{
+	options := util.HdfReadOptions{
 		Dtype:        reflect.Float32,
 		ReadOnCreate: true,
 		File:         rb.f,
 	}
 
-	data, err := hdf5utils.NewHdfDataset(datapath, options)
+	data, err := util.NewHdfDataset(datapath, options)
 	if err != nil {
 		return nil, err
 	}

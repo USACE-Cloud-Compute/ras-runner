@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"ras-runner/actions"
 
-	"github.com/usace/cc-go-sdk"
-	"github.com/usace/go-hdf5"
+	"github.com/usace-cloud-compute/cc-go-sdk"
+	"github.com/usace-cloud-compute/go-hdf5"
 )
 
 const (
@@ -27,7 +26,7 @@ type HdftoHdfDatasetAction struct {
 }
 
 func (a *HdftoHdfDatasetAction) Run() error {
-	log.Printf("Ready to copy %s\n", a.Action.Description)
+	log.Printf("Ready to %s\n", a.Action.Description)
 
 	src, err := a.Action.GetInputDataSource("src")
 	if err != nil {
@@ -60,7 +59,7 @@ func CopyHdf5Dataset(src string, srcdataset string, dest string, destdataset str
 	}
 	defer srcfile.Close()
 
-	destpath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
+	destpath := dest //fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
 	_, err = os.Stat(destpath)
 
 	var destfile *hdf5.File
@@ -78,7 +77,7 @@ func CopyHdf5Dataset(src string, srcdataset string, dest string, destdataset str
 		}
 		defer destfile.Close()
 	}
-
+	//need to perform a read/write rather than a copy to.
 	err = srcfile.CopyTo(srcdataset, destfile, destdataset)
 	if err != nil {
 		return err

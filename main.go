@@ -1,7 +1,5 @@
 package main
 
-// #include <stdlib.h>
-import "C"
 import (
 	"log"
 	_ "ras-runner/actions/extract/hdf"
@@ -9,7 +7,7 @@ import (
 	_ "ras-runner/actions/run"
 	_ "ras-runner/actions/utils"
 
-	"github.com/usace/cc-go-sdk"
+	"github.com/usace-cloud-compute/cc-go-sdk"
 )
 
 func main() {

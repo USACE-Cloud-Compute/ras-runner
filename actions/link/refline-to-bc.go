@@ -10,9 +10,9 @@ import (
 	"ras-runner/actions/utils"
 	"reflect"
 
-	"github.com/usace/cc-go-sdk"
-	"github.com/usace/go-hdf5"
-	"github.com/usace/hdf5utils"
+	"github.com/usace-cloud-compute/cc-go-sdk"
+	"github.com/usace-cloud-compute/go-hdf5"
+	"github.com/usace-cloud-compute/go-hdf5/util"
 )
 
 const (
@@ -48,7 +48,7 @@ func (a *ReflineToBc) Run() error {
 	log.Printf("Updating refline to boundary condition %s\n", a.Action.Description)
 	refline := a.Action.Attributes["refline"].(string)
 
-	useRemote := a.Action.Attributes.GetBooleanOrDefault("use-remote-reads",true)
+	useRemote := a.Action.Attributes.GetBooleanOrDefault("use-remote-reads", true)
 	src, err := a.Action.IOManager.GetInputDataSource("source")
 	if err != nil {
 		return fmt.Errorf("error getting input source %s: %s", "source", err)
@@ -80,17 +80,17 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
 		template := os.Getenv("HDF_AWS_S3_TEMPLATE")
 		src = fmt.Sprintf(template, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
-	}else{
+	} else {
 		src = fmt.Sprintf("%s/%s", actions.MODEL_DIR, filepath.Base(src))
 	}
 
-	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
+	srcfile, err := util.OpenFile(src, srcstore.DsProfile)
 	if err != nil {
 		return err
 	}
 	defer srcfile.Close()
 
-	srcTime, err := hdf5utils.NewHdfDataset(actions.TimePath(src_datapath), hdf5utils.HdfReadOptions{
+	srcTime, err := util.NewHdfDataset(actions.TimePath(src_datapath), util.HdfReadOptions{
 		Dtype:        reflect.Float64,
 		File:         srcfile,
 		ReadOnCreate: true,
@@ -102,7 +102,7 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 	defer srcTime.Close()
 
 	//get the reference line flow dataset
-	refLineVals, err := hdf5utils.NewHdfDataset(src_datapath+"/Flow", hdf5utils.HdfReadOptions{
+	refLineVals, err := util.NewHdfDataset(src_datapath+"/Flow", util.HdfReadOptions{
 		Dtype:        reflect.Float32,
 		File:         srcfile,
 		ReadOnCreate: true,
@@ -119,9 +119,9 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		return err
 	}
 
-	refLineNames, err := hdf5utils.NewHdfDataset(src_datapath+"/Name", hdf5utils.HdfReadOptions{
+	refLineNames, err := util.NewHdfDataset(src_datapath+"/Name", util.HdfReadOptions{
 		Dtype:        reflect.String,
-		Strsizes:     hdf5utils.NewHdfStrSet(int(attr.AttrSize)),
+		Strsizes:     util.NewHdfStrSet(int(attr.AttrSize)),
 		File:         srcfile,
 		ReadOnCreate: true,
 	})
@@ -163,15 +163,15 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 	defer destfile.Close()
 
 	//get a copy of the destination data
-	var destVals *hdf5utils.HdfDataset
+	var destVals *util.HdfDataset
 
 	err = func() error {
-		destoptions := hdf5utils.HdfReadOptions{
+		destoptions := util.HdfReadOptions{
 			Dtype:        reflect.Float32,
 			File:         destfile,
 			ReadOnCreate: true,
 		}
-		destVals, err = hdf5utils.NewHdfDataset(dest_datapath, destoptions)
+		destVals, err = util.NewHdfDataset(dest_datapath, destoptions)
 		if err != nil {
 			return err
 		}

@@ -9,9 +9,9 @@ import (
 	"ras-runner/actions"
 	"reflect"
 
-	"github.com/usace/cc-go-sdk"
-	"github.com/usace/go-hdf5"
-	"github.com/usace/hdf5utils"
+	"github.com/usace-cloud-compute/cc-go-sdk"
+	"github.com/usace-cloud-compute/go-hdf5"
+	"github.com/usace-cloud-compute/go-hdf5/util"
 )
 
 func init() {
@@ -54,7 +54,7 @@ func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapa
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
 		src = fmt.Sprintf(actions.S3BucketTemplate, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
 	}
-	srcfile, err := hdf5utils.OpenFile(src, srcstore.DsProfile)
+	srcfile, err := util.OpenFile(src, srcstore.DsProfile)
 	if err != nil {
 		return err
 	}
@@ -76,13 +76,13 @@ func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapa
 
 	//Get the data values from the source file
 	//this is the RAS model output
-	options := hdf5utils.HdfReadOptions{
+	options := util.HdfReadOptions{
 		Dtype:        reflect.Float32,
 		File:         srcfile,
 		ReadOnCreate: true,
 	}
 
-	srcVals, err := hdf5utils.NewHdfDataset(src_datapath, options)
+	srcVals, err := util.NewHdfDataset(src_datapath, options)
 	if err != nil {
 		return err
 	}
@@ -90,28 +90,28 @@ func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapa
 
 	//Get the times corresponding to the source file values
 
-	tsoptions := hdf5utils.HdfReadOptions{
+	tsoptions := util.HdfReadOptions{
 		Dtype:        reflect.Float64,
 		File:         srcfile,
 		ReadOnCreate: true,
 	}
 
-	srcTime, err := hdf5utils.NewHdfDataset(actions.TimePath(src_datapath), tsoptions)
+	srcTime, err := util.NewHdfDataset(actions.TimePath(src_datapath), tsoptions)
 	if err != nil {
 		return err
 	}
 	defer srcTime.Close()
 
 	//Get a copy of the destination dataset
-	var destVals *hdf5utils.HdfDataset
+	var destVals *util.HdfDataset
 
 	err = func() error {
-		destoptions := hdf5utils.HdfReadOptions{
+		destoptions := util.HdfReadOptions{
 			Dtype:        reflect.Float32,
 			File:         destfile,
 			ReadOnCreate: true,
 		}
-		destVals, err = hdf5utils.NewHdfDataset(dest_datapath, destoptions)
+		destVals, err = util.NewHdfDataset(dest_datapath, destoptions)
 		if err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func MigrateBoundaryConditionData(src string, srcstore *cc.DataStore, src_datapa
 	return nil
 }
 
-func getRowVal(srcVals *hdf5utils.HdfDataset, srcTimes *hdf5utils.HdfDataset, timeval float32) (float32, error) {
+func getRowVal(srcVals *util.HdfDataset, srcTimes *util.HdfDataset, timeval float32) (float32, error) {
 	srcdata := make([]float32, 5)
 	srctime := make([]float64, 1)
 

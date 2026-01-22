@@ -9,7 +9,7 @@ import (
 	"ras-runner/actions/extract/hdf"
 	"strings"
 
-	"github.com/usace/cc-go-sdk"
+	"github.com/usace-cloud-compute/cc-go-sdk"
 )
 
 const (

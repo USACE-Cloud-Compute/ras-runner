@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/usace/cc-go-sdk"
-	"github.com/usace/go-hdf5"
-	"github.com/usace/hdf5utils"
+	"github.com/usace-cloud-compute/cc-go-sdk"
+	"github.com/usace-cloud-compute/go-hdf5"
+	"github.com/usace-cloud-compute/go-hdf5/util"
 )
 
 func init() {
@@ -80,12 +80,12 @@ func (a *UpdateOutletTSAction) Run() error {
 	}
 	defer destfile.Close()
 
-	options := hdf5utils.HdfReadOptions{
+	options := util.HdfReadOptions{
 		Dtype:        reflect.Float32,
 		File:         destfile,
 		ReadOnCreate: true,
 	}
-	destVals, err := hdf5utils.NewHdfDataset(hdfDataPath, options)
+	destVals, err := util.NewHdfDataset(hdfDataPath, options)
 	if err != nil {
 		return fmt.Errorf("unable to get the desitional dataset values from hdf: %s", err)
 	}

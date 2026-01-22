@@ -5,11 +5,12 @@ import (
 	"log"
 	"math"
 	"path"
+	"ras-runner/actions/utils"
 	"reflect"
 	"regexp"
 
-	"github.com/usace/go-hdf5"
-	"github.com/usace/hdf5utils"
+	"github.com/usace-cloud-compute/go-hdf5"
+	"github.com/usace-cloud-compute/go-hdf5/util"
 )
 
 /*
@@ -198,7 +199,7 @@ type RasExtractor[T RasExtractDataTypes] struct {
 
 // open opens an HDF5 file for reading
 func (rer *RasExtractor[T]) open(filepath string) error {
-	f, err := hdf5utils.OpenFile(filepath)
+	f, err := util.OpenFile(filepath)
 	if err != nil {
 		return err
 	}
@@ -213,7 +214,7 @@ func (rer *RasExtractor[T]) Close() error {
 
 // GroupMembers returns the names of objects within a specified group path
 func (rer *RasExtractor[T]) GroupMembers(groupPath string) ([]string, error) {
-	group, err := hdf5utils.NewHdfGroup(rer.f, groupPath)
+	group, err := utils.NewHdfGroup(rer.f, groupPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read the hdf group '%s': %s", groupPath, err)
 	}
@@ -273,7 +274,7 @@ func (rer *RasExtractor[T]) RunExtract(datasetnum int, input RasExtractInput) er
 func (rer *RasExtractor[T]) columnNamesPreprocessor(input *RasExtractInput) error {
 	if input.ColNamesDataset != "" {
 		//get string size for the column
-		attr, err := hdf5utils.GetAttrMetadata(rer.f, hdf5utils.DatasetMetadata, input.ColNamesDataset, "")
+		attr, err := utils.GetAttrMetadata(rer.f, utils.DatasetMetadata, input.ColNamesDataset, "")
 		if err != nil {
 			return fmt.Errorf("unable to read metadata for %s: %s", input.ColNamesDataset, err)
 		}
@@ -338,13 +339,13 @@ func (rr *RasExtractorReader[T]) Read(input RasExtractInput) (*RasExtractData[T]
 
 // ReadArray reads data from an HDF5 dataset into a 2D slice
 func (rr *RasExtractorReader[T]) ReadArray(input RasExtractInput) ([][]T, error) {
-	var strSet hdf5utils.HdfStrSet
+	var strSet util.HdfStrSet
 
 	if len(input.StringSizes) > 0 {
-		strSet = hdf5utils.NewHdfStrSet(input.StringSizes...)
+		strSet = util.NewHdfStrSet(input.StringSizes...)
 	}
 
-	dataSet, err := hdf5utils.NewHdfDataset(string(input.DataPath), hdf5utils.HdfReadOptions{
+	dataSet, err := util.NewHdfDataset(string(input.DataPath), util.HdfReadOptions{
 		Dtype:        reflect.TypeFor[T]().Kind(),
 		Strsizes:     strSet,
 		File:         rr.f,
@@ -482,7 +483,7 @@ func isValueNaN(value reflect.Value) bool {
 }
 
 // toSlice converts an HDF5 dataset to a 2D slice of type T
-func toSlice[T any](dataset *hdf5utils.HdfDataset) ([][]T, error) {
+func toSlice[T any](dataset *util.HdfDataset) ([][]T, error) {
 	rows := make([][]T, dataset.Rows())
 	for i := range rows {
 		dest := []T{}

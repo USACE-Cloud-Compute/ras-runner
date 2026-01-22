@@ -10,7 +10,7 @@ import (
 
 	"ras-runner/actions"
 
-	"github.com/usace/cc-go-sdk"
+	"github.com/usace-cloud-compute/cc-go-sdk"
 )
 
 const (

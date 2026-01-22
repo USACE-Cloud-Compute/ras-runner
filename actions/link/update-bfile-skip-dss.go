@@ -7,7 +7,7 @@ import (
 	"ras-runner/actions"
 	"strings"
 
-	"github.com/usace/cc-go-sdk"
+	"github.com/usace-cloud-compute/cc-go-sdk"
 )
 
 func init() {

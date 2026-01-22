@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/usace/go-hdf5"
+	"github.com/usace-cloud-compute/go-hdf5"
 )
 
 type Hdf5MetadataType string
@@ -76,7 +76,7 @@ func GetAttrMetadata(f *hdf5.File, metaType Hdf5MetadataType, metaPath string, m
 		}
 		defer dtype.Close()
 
-		ctype := hdf5.CompoundType{*dtype}
+		ctype := hdf5.CompoundType{Datatype: *dtype}
 		defer ctype.Close()
 
 		nm := ctype.NMembers()

@@ -7,8 +7,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/usace/go-hdf5"
-	"github.com/usace/hdf5utils"
+	"github.com/usace-cloud-compute/go-hdf5"
+	"github.com/usace-cloud-compute/go-hdf5/util"
 )
 
 type Hdf5Float32 float32
@@ -221,7 +221,7 @@ type structuresAttr66 struct {
 
 func ReadSNetIDToNameFromGeoHDF(filePath string) (map[string]int, error) {
 
-	f, err := hdf5utils.OpenFile(filePath)
+	f, err := util.OpenFile(filePath)
 	if err != nil {
 		log.Fatalln(err) //does this actually return error? if not, why have the method return error?
 	}
@@ -231,7 +231,7 @@ func ReadSNetIDToNameFromGeoHDF(filePath string) (map[string]int, error) {
 
 	if isversion66 {
 		data := []structuresAttr66{}
-		err = hdf5utils.ReadCompoundAttributes(f, STRUCTURE_DATA_PATH, &data, nil)
+		err = util.ReadCompoundAttributes(f, STRUCTURE_DATA_PATH, &data, nil)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -244,7 +244,7 @@ func ReadSNetIDToNameFromGeoHDF(filePath string) (map[string]int, error) {
 		return snetToName, nil
 	} else {
 		data := []structuresAttr{}
-		err = hdf5utils.ReadCompoundAttributes(f, STRUCTURE_DATA_PATH, &data, nil)
+		err = util.ReadCompoundAttributes(f, STRUCTURE_DATA_PATH, &data, nil)
 		if err != nil {
 			log.Fatalln(err)
 		}
