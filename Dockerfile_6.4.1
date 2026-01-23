@@ -1,21 +1,18 @@
 #Set up the environment to build the cc-ras-runner plugin
-FROM 038611608639.dkr.ecr.us-east-1.amazonaws.com/ras6-linux-base:latest as builder
-#FROM ras6-linux-base:0.90 as builder
+FROM ghcr.io/usace-cloud-compute/cc-hdf5-base:latest as builder
+
 
 #names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
 ARG RAS_DEPLOYMENT=EngineOnly
 ARG RAS_VERSION=HEC-RAS_641_Linux
 ARG RAS_ARCHIVE=${RAS_VERSION}_${RAS_DEPLOYMENT}.zip
 ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/${RAS_ARCHIVE}
-ARG GOVERSION=1.23.10
+ARG GOVERSION=1.24.12
 ARG GOBINARCH=linux-amd64
 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
 ENV PATH=/go/bin:$PATH
-ENV CGO_LDFLAGS="-L/hdf/lib"
-ENV CGO_CFLAGS="-I/hdf/include"
-ENV LD_LIBRARY_PATH=/hdf/lib
 
 
 RUN wget ${NEXUS_RAS_URL} &&\ 
@@ -37,9 +34,9 @@ RUN cd /src/ras-runner &&\
 
 
 FROM rockylinux:8 as prod
-
+ARG HDF5_PREFIX=/usr/local/lib/hdf5
 ENV PATH=/hdf/bin:/ras/bin:/ras:$PATH
-ENV LD_LIBRARY_PATH=/hdf/lib
+ENV LD_LIBRARY_PATH=${HDF5_PREFIX}/lib
 
 RUN mkdir -p /sim/model
 

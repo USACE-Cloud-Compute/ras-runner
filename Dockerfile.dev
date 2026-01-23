@@ -1,4 +1,4 @@
-FROM testhdfbase
+FROM ghcr.io/usace-cloud-compute/cc-hdf5-base:latest
 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
