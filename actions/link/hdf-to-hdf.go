@@ -3,10 +3,11 @@ package actions
 import (
 	"fmt"
 	"log"
-	"os"
+	"reflect"
 
 	"github.com/usace-cloud-compute/cc-go-sdk"
 	"github.com/usace-cloud-compute/go-hdf5"
+	"github.com/usace-cloud-compute/go-hdf5/util"
 )
 
 const (
@@ -60,27 +61,58 @@ func CopyHdf5Dataset(src string, srcdataset string, dest string, destdataset str
 	defer srcfile.Close()
 
 	destpath := dest //fmt.Sprintf("%s/%s", actions.MODEL_DIR, dest)
-	_, err = os.Stat(destpath)
 
-	var destfile *hdf5.File
-
-	if os.IsNotExist(err) {
-		destfile, err = hdf5.CreateFile(destpath, hdf5.F_ACC_EXCL)
-		if err != nil {
-			return err
-		}
-		defer destfile.Close()
-	} else {
-		destfile, err = hdf5.OpenFile(destpath, hdf5.F_ACC_RDWR)
-		if err != nil {
-			return err
-		}
-		defer destfile.Close()
-	}
-	//need to perform a read/write rather than a copy to.
-	err = srcfile.CopyTo(srcdataset, destfile, destdataset)
+	destfile, err := hdf5.OpenFile(destpath, hdf5.F_ACC_RDWR)
 	if err != nil {
 		return err
 	}
+	defer destfile.Close()
+
+	//need to perform a read/write rather than a copy to.
+
+	var srcVals *util.HdfDataset
+	err = func() error {
+		srcoptions := util.HdfReadOptions{
+			Dtype:        reflect.Float32,
+			File:         srcfile,
+			ReadOnCreate: true,
+		}
+		srcVals, err = util.NewHdfDataset(srcdataset, srcoptions)
+		if err != nil {
+			return err
+		}
+		defer srcVals.Close()
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	var dstVals *util.HdfDataset
+	err = func() error {
+		dstoptions := util.HdfReadOptions{
+			Dtype:        reflect.Float32,
+			File:         destfile,
+			ReadOnCreate: true,
+		}
+		dstVals, err = util.NewHdfDataset(destdataset, dstoptions)
+		if err != nil {
+			return err
+		}
+		defer dstVals.Close()
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	if srcVals.Cols() != dstVals.Cols() {
+		return fmt.Errorf("source column count doesnt equal dest column count")
+	}
+
+	if srcVals.Rows() != dstVals.Rows() {
+		return fmt.Errorf("source row count doesnt equal dest row count")
+	}
+
 	return nil
 }

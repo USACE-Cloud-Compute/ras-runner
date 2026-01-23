@@ -1,0 +1,44 @@
+{
+    "stores": [
+      {
+        "name": "FFRD",
+        "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "store_type": "FS",
+        "profile": "FFRD",
+        "params": {
+          "root": "hdf_to_hdf/LACPR"
+        }
+      }
+    ],        
+    "actions": [
+      {
+        "type": "link",
+        "description": "copy hdf data from file to file",
+        "name": "hdf-to-hdf",
+        "inputs": [
+          {
+            "name": "src",
+            "paths": {
+              "hdf": "/workspaces/cc-ras-runner/testData/actions/link/hdf_to_hdf/LACPR/LACPR2_TC_0418_ADCIRC_Boundary.hdf"
+            },
+            "data_paths":{
+              "coastal_boundary":"DATA"
+            },
+            "store_name": "FFRD"
+          }
+        ],
+        "outputs": [
+            {
+              "name": "dest",
+              "paths": {
+                "hdf": "/workspaces/cc-ras-runner/testData/actions/link/hdf_to_hdf/LACPR/SLaMM_2021_Test_v2.p22.hdf"
+              },
+              "data_paths":{
+                "coastal_boundary":"Event Conditions/Unsteady/Boundary Conditions/Stage Hydrographs/2D: SLaMM BCLine: GULF"
+              },
+              "store_name": "FFRD"
+            }
+          ]
+      }
+    ]
+  }
