@@ -14,6 +14,14 @@ ENV GOROOT=/go
 ENV GOPATH=/src/go
 ENV PATH=/go/bin:$PATH
 
+RUN mkdir -p /ras/libs
+RUN mkdir -p /ras/bin
+
+RUN apt update &&\ 
+    apt -y install git &&\
+    apt -y install libgdal-dev &&\
+    apt -y install gcc &&\
+    apt -y install make
 
 RUN wget ${NEXUS_RAS_URL} &&\ 
     unzip ${RAS_ARCHIVE} &&\

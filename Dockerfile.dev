@@ -15,6 +15,7 @@ RUN mkdir -p /ras/libs
 RUN mkdir -p /ras/bin
 RUN apt update &&\ 
     apt -y install git &&\
+    apt -y install libgdal-dev &&\
     apt -y install gcc &&\
     apt -y install make
 #download RAS and put the file in the right place. Give them permissions to execute
