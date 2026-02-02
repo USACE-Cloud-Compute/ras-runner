@@ -43,7 +43,7 @@ RUN cd /src/ras-runner &&\
 
 FROM rockylinux:8 as prod
 ARG HDF5_PREFIX=/usr/local/lib/hdf5
-ENV PATH=/hdf/bin:/ras/bin:/ras:$PATH
+ENV PATH=${HDF5_PREFIX}/bin:/ras/bin:/ras:$PATH
 ENV LD_LIBRARY_PATH=${HDF5_PREFIX}/lib
 
 RUN mkdir -p /sim/model
@@ -53,7 +53,7 @@ COPY --from=builder /ras /ras
 #cc-ras-runner binary
 COPY --from=builder /src/ras-runner/ras-runner /ras/ras-runner
 #hdf binaries
-COPY --from=builder /hdf /hdf
+COPY --from=builder ${HDF5_PREFIX} ${HDF5_PREFIX}
 #geom preproc script
 COPY --from=builder /src/ras-runner/run-geom-preproc.sh /ras/
 #model run script
