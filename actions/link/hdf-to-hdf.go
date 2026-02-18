@@ -113,6 +113,27 @@ func CopyHdf5Dataset(src string, srcdataset string, dest string, destdataset str
 	if srcVals.Rows() != dstVals.Rows() {
 		return fmt.Errorf("source row count doesnt equal dest row count")
 	}
+	writer, err := destfile.OpenDataset(destdataset)
+	if err != nil {
+		return err
+	}
+	data := make([]float32, dstVals.Rows()*dstVals.Cols())
+	index := 0
+	for i := 0; i < dstVals.Rows(); i++ {
 
+		srcRow := make([]float32, dstVals.Cols())
+		err := srcVals.ReadRow(i, &srcRow)
+		if err != nil {
+			return err
+		}
+		for j := 0; j < dstVals.Cols(); j++ {
+			data[index] = srcRow[j]
+			index++
+		}
+	}
+	err = writer.Write(data)
+	if err != nil {
+		return err
+	}
 	return nil
 }

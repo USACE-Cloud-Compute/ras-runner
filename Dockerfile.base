@@ -1,0 +1,25 @@
+FROM rockylinux:8
+
+ARG HDF5_SRC_URL=https://support.hdfgroup.org/releases/hdf5/v1_14/v1_14_5/downloads
+ARG HDF5_PREFIX=/usr/local/lib/hdf5
+ARG HDF5_VERSION=1.14.5 
+
+ENV LD_LIBRARY_PATH=${HDF5_PREFIX}/lib
+
+RUN yum -y update &&\ 
+    yum -y install git &&\
+    yum -y install wget &&\
+    yum -y install unzip &&\
+    yum -y install gcc &&\
+    yum -y install gcc-c++ &&\
+    yum -y install make &&\
+    yum -y install libcurl-devel.x86_64 &&\
+    yum -y install openssl-devel.x86_64
+
+
+RUN wget ${HDF5_SRC_URL}/hdf5-${HDF5_VERSION}.tar.gz &&\
+    tar -xvzf /hdf5-${HDF5_VERSION}.tar.gz &&\ 
+    cd /hdf5-${HDF5_VERSION} &&\
+    ./configure --prefix=${HDF5_PREFIX} --with-default-api-version=v110 --enable-shared --enable-ros3-vfd --enable-threadsafe --disable-hl &&\    
+    make &&\
+    make install

@@ -1,4 +1,4 @@
-FROM ghcr.io/usace-cloud-compute/cc-hdf5-base:latest
+FROM ghcr.io/usace-cloud-compute/cc-hdf5-ras-base:v1.0.0
 
 ENV GOROOT=/go
 ENV GOPATH=/src/go
