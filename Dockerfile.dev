@@ -3,8 +3,8 @@ FROM ras-hdf5-base
 ENV GOROOT=/go
 ENV GOPATH=/src/go
 ENV PATH=/go/bin:$PATH
-ENV LD_LIBRARY_PATH=/hdf/lib:/usr/local/lib64:/usr/local/lib
-
+ENV RAS_LIB_PATH=/ras/libs:/ras/libs/mkl:/ras/libs/rhel_8
+ENV LD_LIBRARY_PATH=$RAS_LIB_PATH:/hdf/lib:/usr/local/lib64:/usr/local/lib
 
 #names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
 ARG RAS_DEPLOYMENT=EngineOnly
@@ -21,8 +21,8 @@ RUN yum -y update &&\
 #download RAS and put the file in the right place. Give them permissions to execute
 RUN wget ${NEXUS_RAS_URL} &&\ 
     unzip ${RAS_ARCHIVE} &&\
-    mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras/libs &&\
-    mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras/bin &&\
+    mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras &&\
+    mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras &&\
     chmod -R +x /ras/* &&\
     wget https://go.dev/dl/go1.27.4.linux-amd64.tar.gz -P / &&\
     tar -xvzf go1.27.4.linux-amd64.tar.gz -C / &&\
