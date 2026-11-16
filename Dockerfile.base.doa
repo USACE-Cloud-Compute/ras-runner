@@ -20,6 +20,6 @@ RUN yum -y update &&\
 RUN wget ${HDF5_SRC_URL}/hdf5-${HDF5_VERSION}.tar.gz &&\
     tar -xvzf /hdf5-${HDF5_VERSION}.tar.gz &&\ 
     cd /hdf5-${HDF5_VERSION} &&\
-    ./configure --prefix=${HDF5_PREFIX} --with-default-api-version=v110 --enable-shared --enable-ros3-vfd --enable-threadsafe --disable-hl &&\    
+    ./configure --prefix=${HDF5_PREFIX} --with-default-api-version=v110 --enable-shared --enable-ros3-vfd --enable-threadsafe --enable-unsupported  &&\    
     make &&\
     make install

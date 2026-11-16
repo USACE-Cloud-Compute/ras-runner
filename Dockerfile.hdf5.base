@@ -1,0 +1,78 @@
+FROM rockylinux:8
+
+ENV TZ=America/New_York
+ENV CGO_LDFLAGS="-L/hdf/lib"
+ENV CGO_CFLAGS="-I/hdf/include"
+ENV LD_LIBRARY_PATH=/hdf/lib
+
+COPY hdf5-2.2.0.tar.gz /hdf5-2.2.0.tar.gz
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &&\
+    yum -y update &&\
+    yum -y install git &&\
+    yum -y install wget &&\
+    yum -y install unzip &&\
+    yum -y install gcc &&\
+    yum -y install gcc-c++ &&\
+    yum -y install make &&\
+    yum -y install cmake &&\
+    yum -y install libcurl-devel.x86_64 &&\
+    yum -y install openssl-devel.x86_64 &&\
+    yum -y install wget curl zip unzip git vim &&\
+    cd /opt &&\
+    mkdir aws &&\
+    cd aws &&\
+    git clone https://github.com/aws/aws-lc.git &&\
+    git clone https://github.com/aws/s2n-tls.git &&\
+    git clone https://github.com/awslabs/aws-c-common.git &&\
+    git clone https://github.com/awslabs/aws-checksums.git &&\
+    git clone https://github.com/awslabs/aws-c-cal.git &&\
+    git clone https://github.com/awslabs/aws-c-io.git &&\
+    git clone https://github.com/awslabs/aws-c-compression.git &&\
+    git clone https://github.com/awslabs/aws-c-http.git &&\
+    git clone https://github.com/awslabs/aws-c-sdkutils.git &&\
+    git clone https://github.com/awslabs/aws-c-auth.git &&\
+    git clone https://github.com/awslabs/aws-c-s3.git &&\
+    cmake -S aws-lc -B aws-lc/build -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_SHARED_LIBS=1 -DDISABLE_GO=ON -DDISABLE_PERL=ON &&\
+    cmake --build aws-lc/build --target install --parallel 4 &&\
+    cmake -S s2n-tls -B s2n-tls/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build s2n-tls/build --target install --parallel 4 &&\
+    cmake -S aws-c-common -B aws-c-common/build -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-c-common/build --target install --parallel 4 &&\
+    cmake -S aws-checksums -B aws-checksums/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-checksums/build --target install --parallel 4 &&\
+    cmake -S aws-c-cal -B aws-c-cal/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-c-cal/build --target install --parallel 4 &&\
+    cmake -S aws-c-io -B aws-c-io/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-c-io/build --target install --parallel 4 &&\
+    cmake -S aws-c-compression -B aws-c-compression/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-c-compression/build --target install --parallel 4 &&\
+    cmake -S aws-c-http -B aws-c-http/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-c-http/build --target install --parallel 4 &&\
+    cmake -S aws-c-sdkutils -B aws-c-sdkutils/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-c-sdkutils/build --target install --parallel 4 &&\
+    cmake -S aws-c-auth -B aws-c-auth/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-c-auth/build --target install --parallel 4 &&\
+    cmake -S aws-c-s3 -B aws-c-s3/build -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_PREFIX_PATH=/usr/local -DBUILD_SHARED_LIBS=1 &&\
+    cmake --build aws-c-s3/build --target install --parallel 4
+
+RUN cd / &&\
+    tar -xvzf /hdf5-2.2.0.tar.gz &&\ 
+    cd /hdf5-2.2.0 &&\
+    mkdir -p build &&\
+    cd build &&\
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
+         -DHDF5_ENABLE_ROS3_VFD=ON \
+         -DHDF5_DEFAULT_API_VERSION:STRING=v110 \
+         -DBUILD_STATIC_LIBS=OFF  \
+         -DBUILD_TESTING=OFF  \
+         -DHDF5_BUILD_HL_LIB:BOOL=ON \
+         -DBUILD_SHARED_LIBS:BOOL=ON \
+         -DHDF5_ENABLE_THREADSAFE:BOOL=ON \
+         -DHDF5_BUILD_EXAMPLES=OFF \
+         -DHDF5_BUILD_TOOLS=ON  \
+         -DHDF5_BUILD_UTILS=OFF \
+         -DCMAKE_BUILD_TYPE=Release \
+         -DHDF5_ALLOW_UNSUPPORTED:BOOL=ON &&\
+    make -j 4 &&\
+    make install
