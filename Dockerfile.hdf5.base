@@ -62,6 +62,7 @@ RUN cd / &&\
     mkdir -p build &&\
     cd build &&\
     cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
+         -DHDF5_ENABLE_ZLIB_SUPPORT:BOOL=ON \
          -DHDF5_ENABLE_ROS3_VFD=ON \
          -DHDF5_DEFAULT_API_VERSION:STRING=v110 \
          -DBUILD_STATIC_LIBS=OFF  \
