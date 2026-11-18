@@ -170,7 +170,7 @@ func (a *RasExtractAction) Run() error {
 			},
 		})
 		//reset accumulator
-		writerAccumulator = make(map[string][]map[string]any)
+		writerAccumulator.Reset()
 		return err
 	}
 }

@@ -8,7 +8,7 @@ go 1.24
 
 require (
 	github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20251124210849-b455e063a7ea
-	github.com/usace-cloud-compute/go-hdf5 v0.0.0-20251031185515-a15adbf5c439
+	github.com/usace-cloud-compute/go-hdf5 v0.0.0-20261118183623-c59d15dfc32d
 )
 
 require github.com/usace-cloud-compute/filesapi v0.0.0-20251208214213-aba3a215fa25 // indirect

@@ -119,6 +119,8 @@ github.com/usace-cloud-compute/filesapi v0.0.0-20251208214213-aba3a215fa25 h1:U6
 github.com/usace-cloud-compute/filesapi v0.0.0-20251208214213-aba3a215fa25/go.mod h1:6iMo7JYrqbf0dfSVGqrAJfoVhi2hKJysD5o8mXi0XhI=
 github.com/usace-cloud-compute/go-hdf5 v0.0.0-20251031185515-a15adbf5c439 h1:kFx6y7TIBO5kcjOUY9cPM7x0GKtuxJAUUmdLZcm+1p8=
 github.com/usace-cloud-compute/go-hdf5 v0.0.0-20251031185515-a15adbf5c439/go.mod h1:YDwe9tkt8xWTFsOqGMK/RLbUJDsTMo54ssQazmpSVLE=
+github.com/usace-cloud-compute/go-hdf5 v0.0.0-20261118183623-c59d15dfc32d h1:I6wEaGoRT79NJSxsGkX3Qt5Di2M7eh+sZc3yZQSVgiI=
+github.com/usace-cloud-compute/go-hdf5 v0.0.0-20261118183623-c59d15dfc32d/go.mod h1:Y5GwsmEQpkOg8Z1mcHpO9AGDB00I7TJoHxDIQrNNyyw=
 github.com/usace/go-hdf5 v0.0.0-20250905114727-9cd0fd2d5ff7 h1:3rsiho7bA8TOgl4GAUPJ4vxqDWEm6Z8jzYrXTq2xrZ8=
 github.com/usace/go-hdf5 v0.0.0-20250905114727-9cd0fd2d5ff7/go.mod h1:7UnGKc/bXuT03VYfEx/Od6Jq0zmBMoH0jEVMESxnyLg=
 github.com/usace/go-hdf5 v0.0.0-20251010161119-8689246c233d h1:3mGR5J/prBCCS9H3NeeR6zO2sH4/PBW71pR+DCIlJfY=

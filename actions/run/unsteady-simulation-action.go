@@ -3,6 +3,7 @@ package run
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"ras-runner/actions"
@@ -32,6 +33,7 @@ type UnsteadySimulationAction struct {
 
 func (a UnsteadySimulationAction) Run() error {
 	log.Printf("Running unsteady-simulation: %s", a.Action.Description)
+	slog.Info("Running unsteady-simulation", "description", a.Action.Description)
 
 	scriptPath := os.Getenv(actions.RAS_SCRIPT_PATH_ENV)
 	if scriptPath == "" {
@@ -80,8 +82,7 @@ func (a UnsteadySimulationAction) Run() error {
 
 	//check for failure condition here
 	if stable, err := isModelStable(modelPrefix, plan); !stable {
-		log.Printf("Model failed: %s\n", err)
-		os.Exit(1) //hard exit with non-zero error condition.  Informs batch the compute filed
+		return fmt.Errorf("Model failed: %s\n", err)
 	}
 
 	return nil

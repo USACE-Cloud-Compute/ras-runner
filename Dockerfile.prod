@@ -8,7 +8,6 @@ ENV LD_LIBRARY_PATH=$RAS_LIB_PATH:/usr/local/lib64:/usr/local/lib
 
 #names specific to artifacts downloaded from cloud-wat-resources on the HEC Nexus.  Replace version number in all args. Currently available 610,631,641. -bbb 20240229
 ARG RAS_DEPLOYMENT=EngineOnly
-ARG RAS_VERSION=HEC-RAS_641_Linux
 ARG RAS_ARCHIVE=${RAS_VERSION}_${RAS_DEPLOYMENT}.zip
 ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/${RAS_ARCHIVE}
 ARG GOVERSION=1.27.4

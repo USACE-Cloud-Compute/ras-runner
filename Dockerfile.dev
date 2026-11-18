@@ -11,6 +11,8 @@ ARG RAS_DEPLOYMENT=EngineOnly
 ARG RAS_VERSION=HEC-RAS_641_Linux
 ARG RAS_ARCHIVE=${RAS_VERSION}_${RAS_DEPLOYMENT}.zip
 ARG NEXUS_RAS_URL=https://www.hec.usace.army.mil/nexus/repository/cloud-wat-resources/ras/${RAS_ARCHIVE}
+ARG GOVERSION=1.27.4
+ARG GOBINARCH=linux-amd64
 
 RUN mkdir -p /ras/libs
 RUN mkdir -p /ras/bin
@@ -24,8 +26,8 @@ RUN wget ${NEXUS_RAS_URL} &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/libs /ras &&\
     mv /${RAS_VERSION}_${RAS_DEPLOYMENT}/bin /ras &&\
     chmod -R +x /ras/* &&\
-    wget https://go.dev/dl/go1.27.4.linux-amd64.tar.gz -P / &&\
-    tar -xvzf go1.27.4.linux-amd64.tar.gz -C / &&\
+    wget https://go.dev/dl/go${GOVERSION}.${GOBINARCH}.tar.gz -P / &&\
+    tar -xvzf go${GOVERSION}.${GOBINARCH}.tar.gz -C / &&\
     mkdir -p /sim/model
 
 

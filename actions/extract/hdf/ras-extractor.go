@@ -2,7 +2,7 @@ package hdf
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"path"
 	"ras-runner/actions/utils"
@@ -12,6 +12,35 @@ import (
 	"github.com/usace-cloud-compute/go-hdf5"
 	"github.com/usace-cloud-compute/go-hdf5/util"
 )
+
+type errorContainer interface {
+	Unwrap() []error
+}
+
+type extractErrors struct {
+	errors []error
+}
+
+func (ee *extractErrors) Add(err error) {
+	if err != nil {
+		ee.errors = append(ee.errors, err)
+	}
+}
+
+func (ee *extractErrors) Err() error {
+	if len(ee.errors) == 0 {
+		return nil
+	}
+	return ee
+}
+
+func (ee *extractErrors) Error() string {
+	return "one or more errors occurred during extraction"
+}
+
+func (ee *extractErrors) Unwrap() []error {
+	return ee.errors
+}
 
 /*
 ras extractor provides functionality for extracting data from HEC-RAS HDF5 files.
@@ -173,16 +202,18 @@ func DataExtract[T RasExtractDataTypes](input RasExtractInput, filepath string) 
 		datasets = []string{input.DataPath}
 	}
 
+	extractErr := extractErrors{}
 	for i, dataset := range datasets {
 		input.DataPath = dataset
 		err := extractor.RunExtract(i, input)
 		if err != nil {
-			log.Printf("failed to extract dataset: %s due to error %s\n", dataset, err)
+			extractErr.Add(err)
+			slog.Error("failed to extract dataset", "dataset", dataset, "error", err)
 			//return fmt.Errorf("failed to extract dataset: %s due to error %s", dataset, err)
 		}
 	}
 
-	return nil
+	return extractErr.Err()
 }
 
 // NewRasExtractor creates a new RasExtractor instance for the specified file path

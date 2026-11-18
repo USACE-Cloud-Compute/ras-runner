@@ -7,10 +7,13 @@ import (
 	_ "ras-runner/actions/run"
 	_ "ras-runner/actions/utils"
 
+	"ras-runner/actions"
+
 	"github.com/usace-cloud-compute/cc-go-sdk"
 )
 
 func main() {
+	actions.InitLogger()
 	pm, err := cc.InitPluginManager()
 	if err != nil {
 		log.Fatalf("unable to initialize the CC plugin manager: %s\n", err)

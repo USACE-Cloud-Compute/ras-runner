@@ -3,6 +3,8 @@ package hdf
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"ras-runner/actions"
 	"reflect"
 	"testing"
 )
@@ -14,6 +16,7 @@ const (
 //@TODO made DataExtract generic and broke all of the tests.  Fix the tests!
 
 func TestReadBcLinePeak(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		GroupPath:      "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions",
 		Colnames:       []string{"stage", "flow"},
@@ -31,6 +34,7 @@ func TestReadBcLinePeak(t *testing.T) {
 }
 
 func TestReadBcLinePeakJson(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		GroupPath:      "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Boundary Conditions",
 		Colnames:       []string{"stage", "flow"},
@@ -40,7 +44,6 @@ func TestReadBcLinePeakJson(t *testing.T) {
 		WriteSummary:   true,
 		WriteData:      true,
 		WriterType:     JsonWriter,
-		//WriteAccumulator: &ByteBufferWriteAccumulator{},
 		WriteBlockName: "boundary-condition-lines",
 	}
 
@@ -50,13 +53,35 @@ func TestReadBcLinePeakJson(t *testing.T) {
 	}
 	json, err := json.Marshal(&writerAccumulator)
 	fmt.Println(string(json))
-	//fmt.Println(string(input.WriteAccumulator.Flush()))
 }
 
 func TestReadReflineLinePeakWaterSurface(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Water Surface",
 		ColNamesDataset: "refline-peak",
+		Postprocess:     []string{"max"},
+		DataType:        reflect.Float32,
+		WriteSummary:    true,
+		WriterType:      ConsoleWriter,
+	}
+
+	err := DataExtract[float32](input, TestRasHdfFile)
+	if err != nil {
+		if ec, ok := err.(errorContainer); ok {
+			for _, e := range ec.Unwrap() {
+				log.Println(e)
+			}
+		}
+		t.Fatal(err)
+	}
+}
+
+func TestReadReflineLinePeakFlow(t *testing.T) {
+	actions.InitLogger()
+	input := RasExtractInput{
+		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Flow",
+		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
 		Postprocess:     []string{"max"},
 		DataType:        reflect.Float32,
 		WriteSummary:    true,
@@ -69,23 +94,8 @@ func TestReadReflineLinePeakWaterSurface(t *testing.T) {
 	}
 }
 
-// func TestReadReflineLinePeakFlow(t *testing.T) {
-// 	input := RasExtractInput{
-// 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Flow",
-// 		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
-// 		Postprocess:     []string{"max"},
-// 		DataType:        reflect.Float32,
-// 		WriteSummary:    true,
-// 		WriterType:      ConsoleWriter,
-// 	}
-
-// 	err := DataExtract(input, TestRasHdfFile)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// }
-
 func TestReadReflineTimeSeriesWaterSurface(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Water Surface",
 		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
@@ -101,6 +111,7 @@ func TestReadReflineTimeSeriesWaterSurface(t *testing.T) {
 }
 
 func TestReadReflineTimeSeriesFlow(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Flow",
 		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
@@ -116,6 +127,7 @@ func TestReadReflineTimeSeriesFlow(t *testing.T) {
 }
 
 func TestReadRefpointMinVelocity(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Velocity",
 		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
@@ -132,6 +144,7 @@ func TestReadRefpointMinVelocity(t *testing.T) {
 }
 
 func TestReadRefpointMinWaterSurface(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Water Surface",
 		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Name",
@@ -149,14 +162,14 @@ func TestReadRefpointMinWaterSurface(t *testing.T) {
 
 // @TODO...this test seems incomplete
 func TestReadRefpointPeakVelocity(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Velocity",
 		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Name",
 		Postprocess:     []string{"max"},
 		DataType:        reflect.Float32,
 		WriteSummary:    true,
-		WriterType:      JsonWriter,
-		StringSizes:     []int{40},
+		WriterType:      ConsoleWriter,
 	}
 
 	err := DataExtract[float32](input, TestRasHdfFile)
@@ -166,6 +179,7 @@ func TestReadRefpointPeakVelocity(t *testing.T) {
 }
 
 func TestReadRefpointPeakWaterSurface(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Water Surface",
 		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
@@ -182,6 +196,7 @@ func TestReadRefpointPeakWaterSurface(t *testing.T) {
 }
 
 func TestReadRefpointMaxAndMinWaterSurface(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		DataPath:        "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Points/Water Surface",
 		ColNamesDataset: "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines/Name",
@@ -198,6 +213,7 @@ func TestReadRefpointMaxAndMinWaterSurface(t *testing.T) {
 }
 
 func TestReadStructureVariablePeak(t *testing.T) {
+	actions.InitLogger()
 	input := RasExtractInput{
 		GroupPath:    "/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/Perimeter 1/2D Hyd Conn",
 		GroupSuffix:  "Structure Variables",
@@ -216,6 +232,7 @@ func TestReadStructureVariablePeak(t *testing.T) {
 
 // @TODO attribute extract is only wired for JSON Extractor.  Fix this.
 func TestAttributeReader(t *testing.T) {
+	actions.InitLogger()
 	input := AttributeExtractInput{
 		AttributePath:  "/Results/Unsteady/Summary",
 		AttributeNames: []string{"Computation Time DSS", "Computation Time Total", "Maximum WSEL Error", "Maximum number of cores"},
@@ -229,6 +246,7 @@ func TestAttributeReader(t *testing.T) {
 }
 
 func TestAttributeReader2(t *testing.T) {
+	actions.InitLogger()
 	input := AttributeExtractInput{
 		AttributePath:  "/",
 		AttributeNames: []string{"File Type", "File Version"},
