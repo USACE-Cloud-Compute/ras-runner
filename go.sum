@@ -113,10 +113,14 @@ github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKs
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20251124210849-b455e063a7ea h1:tlM91GCRJ1gqc4dcFvfI6h8MI2l5FNR3Ehn+Rh4oDJw=
 github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20251124210849-b455e063a7ea/go.mod h1:HZsGTrNUUdjfqqJJaLpSBEKoIDmu/vnye2KK/AwchDo=
+github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20261030200125-f30fddcf3628 h1:JLdpyN5CkoILizcnLpz3Vf1Z6bpnH+UdC1ykMYoJTAI=
+github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20261030200125-f30fddcf3628/go.mod h1:I/02gJqtCPB7jx/dwy0pWwqY9yOCVxgOZ87jEqA8pUg=
 github.com/usace-cloud-compute/filesapi v0.0.0-20251107191432-8084e0da4b5c h1:1Srw2WpT9tcEIUY853oeojXJjPH8iTYFGLXPaIrUe+I=
 github.com/usace-cloud-compute/filesapi v0.0.0-20251107191432-8084e0da4b5c/go.mod h1:6iMo7JYrqbf0dfSVGqrAJfoVhi2hKJysD5o8mXi0XhI=
 github.com/usace-cloud-compute/filesapi v0.0.0-20251208214213-aba3a215fa25 h1:U6tBkxwBUn3MmT1Utay/c5qDGQavuajSVUVzcbY7Y0Y=
 github.com/usace-cloud-compute/filesapi v0.0.0-20251208214213-aba3a215fa25/go.mod h1:6iMo7JYrqbf0dfSVGqrAJfoVhi2hKJysD5o8mXi0XhI=
+github.com/usace-cloud-compute/filesapi v0.0.0-20261019130306-86cdead80864 h1:234gx6le67MDfKsY7Bju6qQ7PQwhGVnPqQ+99yxLLtg=
+github.com/usace-cloud-compute/filesapi v0.0.0-20261019130306-86cdead80864/go.mod h1:6iMo7JYrqbf0dfSVGqrAJfoVhi2hKJysD5o8mXi0XhI=
 github.com/usace-cloud-compute/go-hdf5 v0.0.0-20251031185515-a15adbf5c439 h1:kFx6y7TIBO5kcjOUY9cPM7x0GKtuxJAUUmdLZcm+1p8=
 github.com/usace-cloud-compute/go-hdf5 v0.0.0-20251031185515-a15adbf5c439/go.mod h1:YDwe9tkt8xWTFsOqGMK/RLbUJDsTMo54ssQazmpSVLE=
 github.com/usace-cloud-compute/go-hdf5 v0.0.0-20261118183623-c59d15dfc32d h1:I6wEaGoRT79NJSxsGkX3Qt5Di2M7eh+sZc3yZQSVgiI=

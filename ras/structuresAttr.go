@@ -2,7 +2,6 @@ package ras
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"math"
 	"strings"
@@ -237,8 +236,6 @@ func ReadSNetIDToNameFromGeoHDF(filePath string) (map[string]int, error) {
 		}
 		snetToName := make(map[string]int, len(data))
 		for _, structure := range data {
-			fmt.Println(structure.Connection)
-			fmt.Println(structure.SnnID)
 			snetToName[structure.Connection] = int(structure.SnnID)
 		}
 		return snetToName, nil
@@ -250,8 +247,6 @@ func ReadSNetIDToNameFromGeoHDF(filePath string) (map[string]int, error) {
 		}
 		snetToName := make(map[string]int, len(data))
 		for _, structure := range data {
-			fmt.Println(structure.Connection)
-			fmt.Println(structure.SnnID)
 			snetToName[structure.Connection] = int(structure.SnnID)
 		}
 		return snetToName, nil

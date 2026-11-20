@@ -7,11 +7,11 @@ go 1.24
 //replace github.com/usace/cc-go-sdk => /workspaces/cc-go-sdk
 
 require (
-	github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20251124210849-b455e063a7ea
+	github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20261030200125-f30fddcf3628
 	github.com/usace-cloud-compute/go-hdf5 v0.0.0-20261118183623-c59d15dfc32d
 )
 
-require github.com/usace-cloud-compute/filesapi v0.0.0-20251208214213-aba3a215fa25 // indirect
+require github.com/usace-cloud-compute/filesapi v0.0.0-20261019130306-86cdead80864 // indirect
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1 // indirect

@@ -2,10 +2,11 @@ package actions
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"os"
 	"ras-runner/actions"
+	"ras-runner/actions/utils"
 	"reflect"
 	"strconv"
 
@@ -45,16 +46,18 @@ type ColumnToBcAction struct {
 }
 
 const (
-	colindexField = "column_index"
-	nameField     = "name"
-	dataPathField = "datapath"
-	srcPathField  = "hdf"
+	colindexField      = "column_index"
+	timeToleranceField = "time_tolerance"
+	nameField          = "name"
+	dataPathField      = "datapath"
+	srcPathField       = "hdf"
 )
 
 // Run executes the column-to-boundary-condition action
 func (a *ColumnToBcAction) Run() error {
-	log.Printf("Updating boundary condition %s\n", a.Action.Description)
+	slog.Info("updating boundary condition", "description", a.Action.Description)
 	column_index := a.Action.Attributes.GetStringOrFail(colindexField)
+	timeTolerance := a.Action.Attributes.GetFloatOrDefault(timeToleranceField, actions.Tolerance)
 	readcol, err := strconv.Atoi(column_index)
 	if err != nil {
 		return fmt.Errorf("invalid column index: %s", column_index)
@@ -86,12 +89,17 @@ func (a *ColumnToBcAction) Run() error {
 		return fmt.Errorf("error getting input store %s: %s", src.StoreName, err)
 	}
 
-	err = MigrateColumnData(src.Paths[srcPathField], srcstore, srcdatapath, destname, destdatapath, readcol)
-	if err != nil {
-		return fmt.Errorf("unable to migrate column data: %s", err)
+	if srcpath, ok := src.Paths[srcPathField]; ok {
+		err = MigrateColumnData(srcpath, srcstore, srcdatapath, destname, destdatapath, readcol, timeTolerance)
+		if err != nil {
+			slog.Error("unable to migrate column data", "src", srcpath, "dest", destdatapath, "column", readcol, "error", err)
+			return err
+		}
+	} else {
+		return fmt.Errorf("missing input data path %s", srcPathField)
 	}
 
-	log.Printf("finished updating boundary condition %s\n", a.Action.Description)
+	slog.Info("finished updating boundary condition", "description", a.Action.Description)
 
 	return nil
 }
@@ -104,13 +112,22 @@ func (a *ColumnToBcAction) Run() error {
 //   - dest: Destination file name
 //   - dest_datapath: Path to dataset within destination file
 //   - readcol: Column index to read from source (1-based)
-func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, readcol int) error {
+func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, readcol int, timeTolerance float64) error {
+
+	var srcfile *hdf5.File
+	var err error
 	if srcstore.StoreType == "S3" {
+		//configure hdf library to read directly from S3 using ROS3 drivers
 		profile := srcstore.DsProfile
+		awsconfig := cc.BuildS3Config(profile)
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
 		src = fmt.Sprintf(actions.S3BucketTemplate, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
+		fapl := utils.S3Fapl(awsconfig)
+		srcfile, err = util.OpenS3File(src, fapl)
+	} else {
+		srcfile, err = util.OpenFile(src, srcstore.DsProfile)
 	}
-	srcfile, err := util.OpenFile(src, srcstore.DsProfile)
+
 	if err != nil {
 		return err
 	}
@@ -189,7 +206,7 @@ func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, 
 			return err
 		}
 
-		val, err := getRowVal2(srcVals, srcTime, destRow[0], readcol)
+		val, err := getRowVal2(srcVals, srcTime, destRow[0], readcol, timeTolerance)
 		if err != nil {
 			return err
 		}
@@ -221,7 +238,7 @@ func MigrateColumnData(src string, srcstore *cc.DataStore, src_datapath string, 
 // Returns:
 //   - float32: Value from source data at matching time, or 0 if not found
 //   - error: Error if any occurred during reading or matching
-func getRowVal2(srcVals *util.HdfDataset, srcTimes *util.HdfDataset, timeval float32, readcol int) (float32, error) {
+func getRowVal2(srcVals *util.HdfDataset, srcTimes *util.HdfDataset, timeval float32, readcol int, timeTolerance float64) (float32, error) {
 	numcols := srcVals.Dims()[1]
 	//
 	srcdata := make([]float32, numcols)
@@ -245,7 +262,7 @@ func getRowVal2(srcVals *util.HdfDataset, srcTimes *util.HdfDataset, timeval flo
 			return 0, err
 		}
 
-		if math.Abs(float64(timeval)-srctime[0]) < actions.Tolerance {
+		if math.Abs(float64(timeval)-srctime[0]) < timeTolerance {
 			return srcdata[readcol-1], nil
 		}
 	}
