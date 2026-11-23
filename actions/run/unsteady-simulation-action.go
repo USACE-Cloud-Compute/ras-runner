@@ -52,7 +52,7 @@ func (a UnsteadySimulationAction) Run() error {
 			if strings.ToLower(runGeomPreproc) == "true" {
 				gppcmd := fmt.Sprintf("%s/%s", scriptPath, actions.GEOM_PREPROC)
 				log.Printf("Running geometry preprocessor: %s %s %s %s\n", gppcmd, actions.MODEL_DIR, modelPrefix, geom)
-				cmdout, err := exec.Command(gppcmd, actions.MODEL_DIR, modelPrefix, geom).Output()
+				cmdout, err := exec.Command(gppcmd, actions.MODEL_DIR, modelPrefix, geom).CombinedOutput()
 				if err != nil {
 					return fmt.Errorf("error running geometry preprocessor:%s", err)
 				}

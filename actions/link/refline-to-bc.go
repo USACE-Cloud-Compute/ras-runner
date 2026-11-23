@@ -46,7 +46,8 @@ type ReflineToBc struct {
 // - "destination" configuration with name and datapath for output data
 func (a *ReflineToBc) Run() error {
 	log.Printf("Updating refline to boundary condition %s", a.Action.Description)
-	refline := a.Action.Attributes["refline"].(string)
+
+	refline := a.Action.Attributes.GetStringOrFail("refline")
 
 	useRemote := a.Action.Attributes.GetBooleanOrDefault("use-remote-reads", true)
 	src, err := a.Action.IOManager.GetInputDataSource("source")
