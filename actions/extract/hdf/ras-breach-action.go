@@ -135,7 +135,7 @@ func (writer JsonBreachDataExtractWriter) Write(recs []BreachRecord) error {
 		datasetName := br[breachLocationField]
 		dataset := fmt.Sprintf(breachPathTemplate, datasetName.(string))
 		outputBlock := RasExtractorOutputBlock[float32]{Dataset: dataset, Record: br}
-		writerAccumulator[writer.blockname] = append(writerAccumulator[writer.blockname], map[string]any{datasetName.(string): outputBlock})
+		writerAccumulator.Add(writer.blockname, datasetName.(string), outputBlock)
 	}
 	return nil
 }

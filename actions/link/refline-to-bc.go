@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
-	"path/filepath"
 	"ras-runner/actions"
 	"ras-runner/actions/utils"
 	"reflect"
@@ -45,8 +45,9 @@ type ReflineToBc struct {
 // - "source" configuration with name and datapath for input data
 // - "destination" configuration with name and datapath for output data
 func (a *ReflineToBc) Run() error {
-	log.Printf("Updating refline to boundary condition %s\n", a.Action.Description)
-	refline := a.Action.Attributes["refline"].(string)
+	log.Printf("Updating refline to boundary condition %s", a.Action.Description)
+
+	refline := a.Action.Attributes.GetStringOrFail("refline")
 
 	useRemote := a.Action.Attributes.GetBooleanOrDefault("use-remote-reads", true)
 	src, err := a.Action.IOManager.GetInputDataSource("source")
@@ -69,22 +70,28 @@ func (a *ReflineToBc) Run() error {
 		return fmt.Errorf("failed to migrate refline data: %s", err)
 	}
 
-	log.Printf("finished updating boundary condition %s\n", a.Action.Description)
+	log.Printf("finished updating boundary condition %s", a.Action.Description)
 
 	return nil
 }
 
 func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string, dest string, dest_datapath string, refline string, useRemote bool) error {
+
+	var srcfile *hdf5.File
+	var err error
 	if useRemote {
+		//configure hdf library to read directly from S3 using ROS3 drivers
 		profile := srcstore.DsProfile
+		awsconfig := cc.BuildS3Config(profile)
 		bucket := os.Getenv(fmt.Sprintf("%s_%s", profile, actions.AWSBUCKET))
-		template := os.Getenv("HDF_AWS_S3_TEMPLATE")
-		src = fmt.Sprintf(template, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
+		//template := os.Getenv("HDF_AWS_S3_TEMPLATE")
+		src = fmt.Sprintf(actions.S3BucketTemplate, bucket, srcstore.Parameters["root"], actions.EncodeUrlPath(src))
+		fapl := utils.S3Fapl(awsconfig)
+		srcfile, err = util.OpenS3File(src, fapl)
 	} else {
-		src = fmt.Sprintf("%s/%s", actions.MODEL_DIR, filepath.Base(src))
+		srcfile, err = util.OpenFile(src, srcstore.DsProfile)
 	}
 
-	srcfile, err := util.OpenFile(src, srcstore.DsProfile)
 	if err != nil {
 		return err
 	}
@@ -138,10 +145,9 @@ func MigrateRefLineData(src string, srcstore *cc.DataStore, src_datapath string,
 		if err != nil || len(name) == 0 {
 			return errors.New("error reading reference line Names")
 		}
-		fmt.Println(refline)
-		fmt.Println(name[0])
 		if refline == name[0] {
 			refLineColumnIndex = i
+			slog.Info("found refline", "refline", refline, "column", i)
 		}
 	}
 	if refLineColumnIndex < 0 {

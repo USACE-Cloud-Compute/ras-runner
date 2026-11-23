@@ -2,8 +2,6 @@ package ras
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"math"
 	"strings"
 
@@ -23,7 +21,6 @@ func (value Hdf5Float32) MarshalJSON() ([]byte, error) {
 
 const STRUCTURE_DATA_PATH string = "Geometry/Structures/Attributes/"
 
-// nominated for an ig-nobel award in data structure science.......
 type structuresAttr struct {
 	Type                     string      `strlen:"16" hdf:"Type"`
 	Mode                     string      `strlen:"18" hdf:"Mode"`
@@ -223,22 +220,23 @@ func ReadSNetIDToNameFromGeoHDF(filePath string) (map[string]int, error) {
 
 	f, err := util.OpenFile(filePath)
 	if err != nil {
-		log.Fatalln(err) //does this actually return error? if not, why have the method return error?
+		return nil, err
 	}
 	defer f.Close()
 
-	isversion66 := checkVersion(f)
+	isversion66, err := checkVersion(f)
+	if err != nil {
+		return nil, err
+	}
 
 	if isversion66 {
 		data := []structuresAttr66{}
 		err = util.ReadCompoundAttributes(f, STRUCTURE_DATA_PATH, &data, nil)
 		if err != nil {
-			log.Fatalln(err)
+			return nil, err
 		}
 		snetToName := make(map[string]int, len(data))
 		for _, structure := range data {
-			fmt.Println(structure.Connection)
-			fmt.Println(structure.SnnID)
 			snetToName[structure.Connection] = int(structure.SnnID)
 		}
 		return snetToName, nil
@@ -246,31 +244,29 @@ func ReadSNetIDToNameFromGeoHDF(filePath string) (map[string]int, error) {
 		data := []structuresAttr{}
 		err = util.ReadCompoundAttributes(f, STRUCTURE_DATA_PATH, &data, nil)
 		if err != nil {
-			log.Fatalln(err)
+			return nil, err
 		}
 		snetToName := make(map[string]int, len(data))
 		for _, structure := range data {
-			fmt.Println(structure.Connection)
-			fmt.Println(structure.SnnID)
 			snetToName[structure.Connection] = int(structure.SnnID)
 		}
 		return snetToName, nil
 	}
 }
-func checkVersion(f *hdf5.File) bool {
+func checkVersion(f *hdf5.File) (bool, error) {
 	srcrootgroup, err := f.OpenGroup("/")
 	if err != nil {
-		log.Fatalln(err)
+		return false, err
 	}
 	defer srcrootgroup.Close()
 	attr, err := srcrootgroup.OpenAttribute("File Version")
 	if err != nil {
-		log.Fatalln(err)
+		return false, err
 	}
 	defer attr.Close()
 
 	var attrdata string
-	attr.Read(&attrdata, hdf5.T_GO_STRING)
-	return strings.Contains(attrdata, "6.6")
+	err = attr.Read(&attrdata, hdf5.T_GO_STRING)
+	return strings.Contains(attrdata, "6.6"), err
 
 }

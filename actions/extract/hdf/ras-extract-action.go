@@ -103,6 +103,9 @@ func (a *RasExtractAction) Run() error {
 		Accumulate:     a.Action.Attributes.GetBooleanOrDefault("accumulate-results", false),
 	}
 
+	// Deprecated: "attributepath" should no longer be used. Attribute extraction is
+	// handled by the "attributes" boolean + "datapath"/"colnames" (see below).
+	// Delete this block in a future release.
 	attrpath, err := a.Action.Attributes.GetString("attributepath")
 	if err == nil {
 		//this means we have an attr path, so we will process an attr extraction
@@ -170,7 +173,7 @@ func (a *RasExtractAction) Run() error {
 			},
 		})
 		//reset accumulator
-		writerAccumulator = make(map[string][]map[string]any)
+		writerAccumulator.Reset()
 		return err
 	}
 }

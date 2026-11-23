@@ -3,7 +3,7 @@ package actions
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"ras-runner/actions"
 	"ras-runner/fragilitycurve"
@@ -33,7 +33,7 @@ type UpdateBfileAction struct {
 // 6. Writes the updated bfile back to disk.
 func (uba *UpdateBfileAction) Run() error {
 	// Assumes bFile and fragility curve file  were copied local with the CopyLocal uba.Action.
-	log.Printf("Ready to update bFile.")
+	slog.Info("Ready to update bFile.")
 	if uba.ModelDir == "" {
 		uba.ModelDir = actions.MODEL_DIR
 	}
@@ -48,7 +48,7 @@ func (uba *UpdateBfileAction) Run() error {
 		return fmt.Errorf("failed to initialized and read the b-file")
 	}
 
-	log.Print("Creating SNET ID to name map from geometry file")
+	slog.Info("Creating SNET ID to name map from geometry file")
 	hdfFileName, err := uba.Action.Attributes.GetString("geoHdfFile")
 	if err != nil {
 		return fmt.Errorf("action attributes do not include a geoHdfFile")
@@ -60,7 +60,7 @@ func (uba *UpdateBfileAction) Run() error {
 		return fmt.Errorf("unable to set the snetID from the geohdf: %s", err)
 	}
 
-	log.Print("Loading Fragility Curve Results")
+	slog.Info("Loading Fragility Curve Results")
 	fcFileName, err := uba.Action.Attributes.GetString("fcFile")
 	if err != nil {
 		return fmt.Errorf("action attributes do not include a fcFile")
@@ -81,7 +81,7 @@ func (uba *UpdateBfileAction) Run() error {
 		err = bf.AmmendBreachElevations(fclr.Name, fclr.FailureElevation)
 		if err != nil {
 			//@TODO...dont like this...doe we really skip on fail?
-			log.Printf("failed to ammend breach elevations: %s %f: %s\n", fclr.Name, fclr.FailureElevation, err)
+			slog.Error("failed to ammend breach elevations", "name", fclr.Name, "value", fclr.FailureElevation, "error", err)
 		}
 	}
 

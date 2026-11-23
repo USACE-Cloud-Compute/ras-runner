@@ -4,14 +4,14 @@ go 1.24
 
 //replace github.com/usace/hdf5utils => /workspaces/hdf5utils
 
-//replace github.com/usace/cc-go-sdk => /workspaces/cc-go-sdk
+//replace github.com/usace-cloud-compute/cc-go-sdk => /workspaces/cc-go-sdk
 
 require (
-	github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20251124210849-b455e063a7ea
-	github.com/usace-cloud-compute/go-hdf5 v0.0.0-20251031185515-a15adbf5c439
+	github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20261123142719-ca5d3579d23d
+	github.com/usace-cloud-compute/go-hdf5 v0.0.0-20261118183623-c59d15dfc32d
 )
 
-require github.com/usace-cloud-compute/filesapi v0.0.0-20251208214213-aba3a215fa25 // indirect
+require github.com/usace-cloud-compute/filesapi v0.0.0-20261019130306-86cdead80864
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1 // indirect
@@ -41,7 +41,6 @@ require (
 	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/usace/go-hdf5 v0.0.0-20251010161119-8689246c233d // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"log/slog"
 	"net/url"
 	"os"
 	"strings"
@@ -65,4 +66,9 @@ func RetryWithBackoff(maxRetries int, delay time.Duration, fn func() error) erro
 		delay *= 2 // exponential backoff
 	}
 	return err
+}
+
+func InitLogger() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 }

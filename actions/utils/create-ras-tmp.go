@@ -138,7 +138,10 @@ func MakeRasHdfTmp(src string, local_dest string) error {
 				if err != nil {
 					return err
 				}*/
-				attr.Read(&attrdata, hdf5.T_GO_STRING) //strong limiting restriction acceptable given our use case.
+				err = attr.Read(&attrdata, hdf5.T_GO_STRING) //strong limiting restriction acceptable given our use case.
+				if err != nil {
+					return err
+				}
 				vals[i] = string(attrdata)
 				sdt, err := hdf5.T_C_S1.Copy()
 				if err != nil {

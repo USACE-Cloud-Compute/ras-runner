@@ -19,10 +19,16 @@ The action performs the following steps:
    - Extracts specified column data from source for each time step
    - Writes updated boundary condition data to destination
 
-5. Time tolerance for matching is defined by the `actions.Tolerance` constant
-6. Column indexing is 0-based (first data column = column 0)
+5. Time tolerance for matching is defined by the `actions.Tolerance` constant if the user does not supply a value
+6. Column indexing is 1-based (first data column = column 1)
 
 ## Configuration
+
+## Store
+A single store is configured for this action.
+
+## Inputs
+An input data source must be configured with a single file path key of "hdf" representing the relative path from the store to the hdf5 input file.
 
 ## Action Attributes
 
@@ -31,7 +37,12 @@ The action performs the following steps:
    - Example: `"3"`
    - Required: Yes
 
-2. **`src`** (map)
+2. **`time-tolerance`** (float)
+   - Description: The tolerance used for matching time values between the two models in decimal days. 
+   - Example: `0.00005`
+   - Required: No.  Default value is `0.000001`
+
+3. **`src`** (map)
    - Description: Source configuration parameters
    - Required: Yes
    - Fields:
@@ -41,7 +52,7 @@ The action performs the following steps:
      - Only S3 stores are currently supported and they must include a "root" parameter
      - The source dataset path is accessed via the "hdf" key in the Paths map
 
-3. **`dest`** (map)
+4. **`dest`** (map)
    - Description: Destination configuration parameters for the local destination hdf5
    - Required: Yes
    - Fields:
@@ -54,16 +65,38 @@ The action performs the following steps:
 ## Configuration Example
 
 ```json
+stores:[
+  {
+      "name": "src_data",
+      "store_type": "S3",
+      "profile": "FFRD",
+      "params": {
+          "root": "/testing"
+      }
+  },
+],
+
+"inputs": [
+  {
+    "name": "input-model",
+    "store_name": "src_data",
+    "paths": {
+      "hdf":"input-model.p01.hdf"
+    }
+  }
+],    
+
 {
   "action": "column-to-boundary-condition",
   "attributes": {
     "column_index": "3",
+    "time_tolerance": 0.00001,
     "src": {
-      "name": "source_data",
+      "name": "input-model",
       "datapath": "/results/flow"
     },
     "dest": {
-      "name": "boundary_condition",
+      "name": "output-model.p01.tmp.hdf",
       "datapath": "/boundary/flow"
     }
   }

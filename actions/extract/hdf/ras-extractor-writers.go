@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sync"
 )
 
 type RasExtractWriterAction string
@@ -17,8 +18,33 @@ type RasDataExtractWriter[T RasExtractDataTypes] interface {
 	Write(WriteRasDataInput[T]) error
 }
 
-// var writerAccumulator map[string][]map[string]any = make(map[string][]map[string]any)
-var writerAccumulator map[string][]map[string]any = make(map[string][]map[string]any)
+var writerAccumulator writerAccumulatorImpl = writerAccumulatorImpl{
+	Data: make(map[string][]map[string]any),
+}
+
+type writerAccumulatorImpl struct { //
+	Data map[string][]map[string]any
+	m    sync.Mutex
+}
+
+func (wa *writerAccumulatorImpl) Add(blockName string, datasetName string, values any) {
+	//writerAccumulator[rw.blockName] = append(writerAccumulator[rw.blockName], map[string]any{input.datasetName: block})
+	wa.m.Lock()
+	defer wa.m.Unlock()
+	wa.Data[blockName] = append(wa.Data[blockName], map[string]any{datasetName: values})
+}
+
+func (wa *writerAccumulatorImpl) New(blockName string, data []map[string]any) {
+	wa.m.Lock()
+	defer wa.m.Unlock()
+	wa.Data[blockName] = data
+}
+
+func (wa *writerAccumulatorImpl) Reset() {
+	wa.m.Lock()
+	defer wa.m.Unlock()
+	wa.Data = make(map[string][]map[string]any)
+}
 
 // =============================================================================
 // JSON writer
@@ -78,7 +104,7 @@ func (rw *JsonRasExtractWriter[T]) Write(input WriteRasDataInput[T]) error {
 	}
 
 	//adds a new extract to a block section
-	writerAccumulator[rw.blockName] = append(writerAccumulator[rw.blockName], map[string]any{input.datasetName: block})
+	writerAccumulator.Add(rw.blockName, input.datasetName, block)
 	return nil
 }
 
@@ -97,7 +123,7 @@ type JsonAttributeExtractWriter struct {
 }
 
 func (jw *JsonAttributeExtractWriter) Write(vals map[string]any) error {
-	writerAccumulator[jw.blockname] = []map[string]any{{"attributes": RasExtractorOutputBlock[float32]{Dataset: jw.dataset, Record: vals}}}
+	writerAccumulator.New(jw.blockname, []map[string]any{{"attributes": RasExtractorOutputBlock[float32]{Dataset: jw.dataset, Record: vals}}})
 	return nil
 }
 

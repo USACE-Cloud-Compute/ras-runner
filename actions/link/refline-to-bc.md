@@ -37,42 +37,75 @@ The action performs the following steps:
    - Example: `"MainChannel"`
    - Required: Yes
 
-2. **`source`** (map)
-   - Description: Source configuration parameters
+2. **`source`** (input data source)
+   - Description: Source configuration, resolved from the action's `inputs` array via `GetInputDataSource("source")`. Not an attribute map; it is a data source entry.
    - Required: Yes
-   - Fields:
-     * `name` (string): Name of the input data source
-     * `datapath` (string): Path to the dataset within the source file
+   - Fields (on the input data source entry):
+     * `name` (string): Must be `"source"` — this is the name used to look up the input data source
+     * `store_name` (string): Name of the store containing the source HDF5 file
+     * `paths` (map): The `hdf` key holds the relative path from the store root to the source HDF5 file
+     * `data_paths` (map): The `refline` key holds the path to the reference line group within the source file (the group containing the `Name` and `Flow` datasets)
    - Notes: 
-     - Only S3 stores are currently supported and they must include a "root" parameter
-     - The source dataset path is accessed via the "hdf" key in the Paths map
+     - The source dataset path is taken from `data_paths["refline"]`; the `hdf` key holds the file path, not the dataset path
 
-3. **`destination`** (map)
-   - Description: Destination configuration parameters
+3. **`destination`** (output data source)
+   - Description: Destination configuration, resolved from the action's `outputs` array via `GetOutputDataSource("destination")`. Not an attribute map; it is a data source entry.
    - Required: Yes
-   - Fields:
-     * `name` (string): Name of the output data source
-     * `datapath` (string): Path to the dataset within the destination file
+   - Fields (on the output data source entry):
+     * `name` (string): Must be `"destination"` — this is the name used to look up the output data source
+     * `paths` (map): The `hdf` key holds the path of the destination HDF5 file relative to the local model directory
+     * `data_paths` (map): The `bcline` key holds the path to the boundary condition dataset within the destination file
    - Notes: 
-     - Only S3 stores are currently supported and they must include a "root" parameter
-     - The dest dataset path is accessed via the "hdf" key in the Paths map
+     - The dest dataset path is taken from `data_paths["bcline"]`; the destination is accessed locally, not via a store
 
 ## Action Configuration Example
 
 ```json
 {
-  "action": "refline-to-boundary-condition",
-  "attributes": {
-    "refline": "MainChannel",
-    "source": {
-      "name": "source_data",
-      "datapath": "/results/refline"
-    },
-    "destination": {
-      "name": "boundary_condition",
-      "datapath": "/boundary/flow"
+  "stores": [
+    {
+      "name": "data",
+      "store_type": "S3",
+      "profile": "FFRD",
+      "params": {
+        "root": "/testing"
+      }
     }
-  }
+  ],
+  "inputs": [
+    {
+      "name": "source",
+      "store_name": "data",
+      "paths": {
+        "hdf": "ray-roberts.p01.hdf"
+      },
+      "data_paths": {
+        "refline": "Results/Unsteady/Output/Output Blocks/DSS Hydrograph Output/Unsteady Time Series/Reference Lines"
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "destination",
+      "store_name": "data",
+      "paths": {
+        "hdf": "modified/lewisville.p01.tmp.hdf"
+      },
+      "data_paths": {
+        "bcline": "Event Conditions/Unsteady/Boundary Conditions/Flow Hydrographs/2D: Lewisville BCLine: ray-roberts_to_lewisville_1"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "refline-to-boundary-condition",
+      "description": "updating bclines based on upstream ras reflines",
+      "type": "link",
+      "attributes": {
+        "refline": "ray-roberts_to_lewisville_1|ray-roberts"
+      }
+    }
+  ]
 }
 ```
 ## Supported Store Types
@@ -90,10 +123,10 @@ The action returns descriptive error messages for:
 
 ## Usage Notes
 ### Source Dataset Structure
-- Expected format: 2D hdf5 dataset containing reference line names and flow values
-- The source dataset path should contain both `/Name` and `/Flow` datasets
-- Reference line names are stored in the `/Name` dataset
-- Flow values are stored in the `/Flow` dataset
+- Expected format: an hdf5 group containing two sibling datasets, `/Name` and `/Flow`
+- The `data_paths["refline"]` value points to this group, not to a single dataset
+- Reference line names are stored in the `<group>/Name` dataset (string values, one row per reference line)
+- Flow values are stored in the `<group>/Flow` dataset (2D array of float values, one column per reference line)
 
 ### Destination Dataset Structure
 - Expected format: 2D array with time as first column and boundary condition values as second column

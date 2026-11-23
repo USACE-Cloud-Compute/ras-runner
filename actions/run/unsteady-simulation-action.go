@@ -1,8 +1,10 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"ras-runner/actions"
@@ -31,7 +33,7 @@ type UnsteadySimulationAction struct {
 }
 
 func (a UnsteadySimulationAction) Run() error {
-	log.Printf("Running unsteady-simulation: %s", a.Action.Description)
+	slog.Info("Running unsteady-simulation", "description", a.Action.Description)
 
 	scriptPath := os.Getenv(actions.RAS_SCRIPT_PATH_ENV)
 	if scriptPath == "" {
@@ -45,43 +47,50 @@ func (a UnsteadySimulationAction) Run() error {
 	out := strings.Builder{}
 
 	if gproc, ok := a.PluginManager.Attributes["geom_preproc"]; ok {
-		runGeomPreproc := gproc.(string)
-		if strings.ToLower(runGeomPreproc) == "true" {
-			gppcmd := fmt.Sprintf("%s/%s", scriptPath, actions.GEOM_PREPROC)
-			log.Printf("Running geometry preprocessor: %s %s %s %s\n", gppcmd, actions.MODEL_DIR, modelPrefix, geom)
-			cmdout, err := exec.Command(gppcmd, actions.MODEL_DIR, modelPrefix, geom).Output()
-			if err != nil {
-				return fmt.Errorf("error running geometry preprocessor:%s", err)
+		runGeomPreproc, ok := gproc.(string)
+		if ok {
+			if strings.ToLower(runGeomPreproc) == "true" {
+				gppcmd := fmt.Sprintf("%s/%s", scriptPath, actions.GEOM_PREPROC)
+				log.Printf("Running geometry preprocessor: %s %s %s %s\n", gppcmd, actions.MODEL_DIR, modelPrefix, geom)
+				cmdout, err := exec.Command(gppcmd, actions.MODEL_DIR, modelPrefix, geom).CombinedOutput()
+				if err != nil {
+					return fmt.Errorf("error running geometry preprocessor:%s", err)
+				}
+				out.Write([]byte("---------- GEOMETRY PREPROCESSOR --------------"))
+				_, err = out.Write(cmdout)
+				if err != nil {
+					return err
+				}
+				out.Write([]byte("---------- END GEOMETRY PREPROCESSOR ----------"))
 			}
-			out.Write([]byte("---------- GEOMETRY PREPROCESSOR --------------"))
-			_, err = out.Write(cmdout)
-			if err != nil {
-				return err
-			}
-			out.Write([]byte("---------- END GEOMETRY PREPROCESSOR ----------"))
+		} else {
+			return fmt.Errorf("invalid geometry preprocessor directive")
 		}
 	}
 
 	log.Printf("Running model %s\n", a.Action.Description)
 	simcmd := fmt.Sprintf("%s/%s", scriptPath, actions.MODEL_SCRIPT)
 	log.Printf("Running model script: %s %s %s %s %s\n", simcmd, actions.MODEL_DIR, modelPrefix, plan, geom)
-	cmdout, err := exec.Command(simcmd, actions.MODEL_DIR, modelPrefix, plan, geom).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to run: %s", err)
-	}
+	cmdout, runerr := exec.Command(simcmd, actions.MODEL_DIR, modelPrefix, plan, geom).CombinedOutput()
+
 	// grab any log information and write to output location before dealing with any errors
 	out.Write([]byte("---------- RAS Model Output --------------"))
-	_, err = out.Write(cmdout)
+	_, err := out.Write(cmdout)
 
-	saveResults(a.PluginManager, modelPrefix, plan, &out)
+	err = saveResults(a.PluginManager, modelPrefix, plan, &out)
 	if err != nil {
-		return fmt.Errorf("failed to save the results: %s", err)
+		return fmt.Errorf("failed to save the results: %w", err)
 	}
 
+	if runerr != nil {
+		return fmt.Errorf("model run failed: %w", runerr)
+	}
 	//check for failure condition here
-	if stable, err := isModelStable(modelPrefix, plan); !stable {
-		log.Printf("Model failed: %s\n", err)
-		os.Exit(1) //hard exit with non-zero error condition.  Informs batch the compute filed
+	if stable, err := isModelStable(modelPrefix, plan); !stable || err != nil {
+		if err != nil {
+			return fmt.Errorf("failed to evaluate model stability: %w", err)
+		}
+		return fmt.Errorf("model was not stable")
 	}
 
 	return nil
@@ -94,19 +103,20 @@ func isModelStable(modelPrefix string, plan string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	defer extractor.Close()
 
 	summaryVals, err := extractor.Attributes(hdf.AttributeExtractInput{
 		AttributePath:  rasModelSummaryPath,
 		AttributeNames: rasModelSummaryExtractFields,
 	})
 	if err != nil {
-		log.Printf("unable to read summary attributes: %s\n", err)
+		slog.Error("unable to read summary attributes", "error", err)
 		return false, err
 	}
 
 	if solutionVal, ok := summaryVals[rasModelSummarySolutionAttrName]; ok {
 		if solutionString, ok := solutionVal.(string); ok {
-			log.Printf("ras solution value: %s\n", solutionString)
+			slog.Info("ras solution value", "value", solutionString)
 			if strings.Contains(solutionString, rasModelSummarySolutionSuccessCriteria) {
 				return true, nil //model results are valid
 			}
@@ -117,42 +127,59 @@ func isModelStable(modelPrefix string, plan string) (bool, error) {
 }
 
 func saveResults(pm *cc.PluginManager, modelPrefix string, rasplan string, raslog *strings.Builder) error {
-	//write plan results
+	var errs []error
+
+	// Save model results (HDF)
 	file := fmt.Sprintf("%s.p%s.tmp.hdf", modelPrefix, rasplan)
+	if err := putModelResult(pm, file); err != nil {
+		errs = append(errs, err)
+	}
+
+	// Save log (always attempted, diagnostic)
+	if err := putLog(pm, raslog); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
+}
+
+func putModelResult(pm *cc.PluginManager, file string) error {
 	ds, err := pm.GetOutputDataSource(file)
 	if err != nil {
-		return err
+		return fmt.Errorf("get output data source for %s: %w", file, err)
 	}
-	filepath := fmt.Sprintf("%s/%s", actions.MODEL_DIR, file)
-	reader, err := os.Open(filepath)
+	reader, err := os.Open(fmt.Sprintf("%s/%s", actions.MODEL_DIR, file))
 	if err != nil {
-		raslog.WriteString(fmt.Sprintf("Unable to open %s for copying: %s\n", file, err))
-	} else {
-		defer reader.Close()
-		_, err = pm.Put(cc.PutOpInput{
-			SrcReader: reader,
-			DataSourceOpInput: cc.DataSourceOpInput{
-				DataSourceName: ds.Name,
-				PathKey:        outputDataSourcePathKey,
-			},
-		})
-		if err != nil {
-			raslog.WriteString(fmt.Sprintf("Unable to copy %s: %s\n", file, err))
-		}
+		return fmt.Errorf("open %s: %w", file, err)
 	}
-	//write log
-	ds, err = pm.GetOutputDataSource("rasoutput")
-	if err != nil {
-		return err
-	}
-	logReader := strings.NewReader(raslog.String())
-	log.Printf("Output log:%s", ds.Paths[outputLogDataSourcePathKey])
+	defer reader.Close()
 	_, err = pm.Put(cc.PutOpInput{
-		SrcReader: logReader,
+		SrcReader: reader,
+		DataSourceOpInput: cc.DataSourceOpInput{
+			DataSourceName: ds.Name,
+			PathKey:        outputDataSourcePathKey,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("put %s: %w", file, err)
+	}
+	return nil
+}
+
+func putLog(pm *cc.PluginManager, raslog *strings.Builder) error {
+	ds, err := pm.GetOutputDataSource("rasoutput")
+	if err != nil {
+		return fmt.Errorf("get log data source: %w", err)
+	}
+	_, err = pm.Put(cc.PutOpInput{
+		SrcReader: strings.NewReader(raslog.String()),
 		DataSourceOpInput: cc.DataSourceOpInput{
 			DataSourceName: ds.Name,
 			PathKey:        outputLogDataSourcePathKey,
 		},
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("put log: %w", err)
+	}
+	return nil
 }

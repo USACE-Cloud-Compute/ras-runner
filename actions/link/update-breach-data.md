@@ -41,6 +41,7 @@ The action modifies the b-file in place, updating breach elevation data.
 ```json
 {
   "action": {
+    "name": "update-breach-bfile",
     "type": "update-breach-bfile",
     "description": "Update breach elevations based on fragility curves",
     "attributes": {
@@ -60,15 +61,15 @@ If any step fails during execution:
 
 ## Usage Notes
 
-This action should be run after copying local files using the `copy-local` action. It requires all input files to exist in the model directory.
+This action should be run after copying local files using the `copy-inputs` action. It requires all input files to exist in the model directory.
 
 ## Example fragility curve results format (fcFile)
 ```json
 {
-  "Results": [
+  "results": [
     {
-      "Name": "Dam1",
-      "FailureElevation": 250.5
+      "location": "Dam1",
+      "failure_elevation": 250.5
     }
   ]
 }

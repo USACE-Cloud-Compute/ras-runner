@@ -54,7 +54,7 @@ func (a *HdftoHdfDatasetAction) Run() error {
 
 func CopyHdf5Dataset(src string, srcdataset string, dest string, destdataset string) error {
 
-	srcfile, err := hdf5.OpenFile(src, hdf5.F_ACC_RDWR)
+	srcfile, err := hdf5.OpenFile(src, hdf5.F_ACC_RDONLY)
 	if err != nil {
 		return err
 	}
