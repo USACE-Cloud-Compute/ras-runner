@@ -4,10 +4,10 @@ go 1.24
 
 //replace github.com/usace/hdf5utils => /workspaces/hdf5utils
 
-replace github.com/usace-cloud-compute/cc-go-sdk => /workspaces/cc-go-sdk
+//replace github.com/usace-cloud-compute/cc-go-sdk => /workspaces/cc-go-sdk
 
 require (
-	github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20261119212326-d71d896946b2
+	github.com/usace-cloud-compute/cc-go-sdk v0.0.0-20261123142719-ca5d3579d23d
 	github.com/usace-cloud-compute/go-hdf5 v0.0.0-20261118183623-c59d15dfc32d
 )
 

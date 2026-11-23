@@ -5,7 +5,8 @@ ENV CGO_LDFLAGS="-L/hdf/lib"
 ENV CGO_CFLAGS="-I/hdf/include"
 ENV LD_LIBRARY_PATH=/hdf/lib
 
-COPY hdf5-2.2.0.tar.gz /hdf5-2.2.0.tar.gz
+ARG HDF5_VERSION=2.2.0
+#COPY hdf5-2.2.0.tar.gz /hdf5-2.2.0.tar.gz
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &&\
     yum -y update &&\
@@ -57,8 +58,9 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &
     cmake --build aws-c-s3/build --target install --parallel 4
 
 RUN cd / &&\
-    tar -xvzf /hdf5-2.2.0.tar.gz &&\ 
-    cd /hdf5-2.2.0 &&\
+    wget https://github.com/HDFGroup/hdf5/releases/download/${HDF5_VERSION}/hdf5-${HDF5_VERSION}.tar.gz &&\
+    tar -xvzf /hdf5-${HDF5_VERSION}.tar.gz &&\ 
+    cd /hdf5-${HDF5_VERSION} &&\
     mkdir -p build &&\
     cd build &&\
     cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
