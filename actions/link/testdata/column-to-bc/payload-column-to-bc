@@ -1,0 +1,40 @@
+{
+    "stores": [
+        {
+            "name": "data",
+            "store_type": "FS",
+            "profile": "",
+            "params": {
+                "root": "/testing"
+            }
+        }
+    ],
+    "inputs": [
+      {
+        "name": "source",
+        "store_name": "data",
+        "paths": {
+          "hdf":"src.hdf"
+        }
+      }
+    ],
+    "actions": [
+      {
+        "type": "link",
+        "description": "column to bc",
+        "name": "column-to-boundary-condition",
+        "attributes": {
+          "column_index": "5",
+          "time_tolerance": 0.00001,
+          "src": {
+            "name": "source",
+            "datapath": "Results/Unsteady/Output/Output Blocks/DSS Hydrograph Output/Unsteady Time Series/2D Flow Areas/ray-roberts/Reference Lines/Flow"
+          },
+          "dest": {
+            "name": "dest.hdf",
+            "datapath": "Event Conditions/Unsteady/Boundary Conditions/Flow Hydrographs/2D: Lewisville BCLine: ray-roberts_to_lewisville_1"
+          }
+        }
+      }
+    ]
+  }

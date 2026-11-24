@@ -10,14 +10,25 @@ import (
 )
 
 const (
-	MODEL_DIR           = "/sim/model"
-	MODEL_SCRIPT        = "run-model.sh"
+	// MODEL_SCRIPT is the name of the RAS run script executed relative to MODEL_SCRIPT_PATH.
+	MODEL_SCRIPT = "run-model.sh"
 	MODEL_SCRIPT_PATH   = "/ras"
 	GEOM_PREPROC        = "run-geom-preproc.sh"
 	RASTIMEPATH         = "Unsteady Time Series/Time"
 	AWSBUCKET           = "AWS_S3_BUCKET"
 	RAS_SCRIPT_PATH_ENV = "RAS_SCRIPT_PATH"
 )
+
+// MODEL_DIR is the directory where RAS model files are staged and where
+// actions that write model files place their output. It can be overridden
+// with the MODEL_DIR environment variable (used by tests to point at a temp
+// dir); otherwise it defaults to the production path.
+var MODEL_DIR = func() string {
+	if v := os.Getenv("MODEL_DIR"); v != "" {
+		return v
+	}
+	return "/sim/model"
+}()
 
 // this is the tolerance we will use when comparing float64 values for comparison
 // specifically it is used to compare RAS time values
